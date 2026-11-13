@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>L1 · Python &amp; Performance — DS588</title>
+<title>Ch 1 · Python &amp; Performance — Advanced Programming for Data Science</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
@@ -15,11 +15,11 @@
 <header class="hero">
   <div class="hero-inner">
     <div>
-      <div class="eyebrow">lecture 1 <b>·</b> introduction</div>
+      <div class="eyebrow">chapter 1 <b>·</b> introduction</div>
       <h1>Python is slow. <span class="u">Your code</span> doesn't have to be.</h1>
-      <p class="lead">What Python is, the three design choices that make it slower than C (interpreted, dynamically typed, single-threaded), and the practical habits that make your programs faster — each one measured live in the Speed Lab, so you can see which tips really pay off. Then a map of the course: OOP, decorators, generators, profiling, the data-science libraries and big data.</p>
+      <p class="lead">What Python is, the three design choices that make it slower than C (interpreted, dynamically typed, single-threaded), and the practical habits that make your programs faster — each one measured live in the Speed Lab, so you can see which tips really pay off. Then a map of what comes next: OOP, decorators, generators, profiling, the data-science libraries and big data.</p>
       <div class="tags"><span>bytecode</span><span>dynamic typing</span><span>GIL</span><span>list comprehension</span><span>join</span><span>set vs list</span><span>timeit</span><span>numpy</span><span>Spark</span></div>
-      <div class="meta"><span><b>Source:</b> DS588 Lecture 1.pdf (Salma Alhagry)</span><span><b>Video:</b> Lecture 1</span></div>
+      <div class="meta"><span><b>You need:</b> basic Python</span><span><b>Hands-on:</b> 16 live cells · 5 labs · quiz</span></div>
     </div>
     <div class="repl" aria-hidden="true"><span class="p">&gt;&gt;&gt;</span> import this<br><span class="o">Beautiful is better than ugly.</span><br><span class="o">Simple is better than complex.</span><br><span class="o">Readability counts.</span><br><span class="p">&gt;&gt;&gt;</span> type(Python)<br><span class="o">&lt;class 'easy-to-write, slow-to-run'&gt;</span><br><span class="p">&gt;&gt;&gt;</span> <span class="cursor"></span></div>
   </div>
@@ -68,13 +68,13 @@ Namespaces are one honking great idea -- let's do more of those!</pre></div>
     <div class="obj"><div class="ty">time &lt;<b>CPU</b>&gt;</div><div class="bd"><h4>The computer's time</h4><p>How fast the finished program <em>runs</em>. Languages like C, C++ or Rust beat Python here.</p></div></div>
   </div>
 
-  <div class="note lec"><div class="lbl">In the lecture</div><p>The lecturer's example: two developers build the same app with the same skills, one in Python and one in a compiled language. The Python developer finishes and delivers first. The other takes longer to write it, but their finished app runs faster.</p></div>
-  <p>The lecture's summary: <em>"There are better languages than Python for making things work quickly. Python is a language for making things work, quickly."</em> For data science that's usually the right deal — and when speed matters, we use the tricks in 1.3 and libraries written in C (1.5). Three design choices cost Python its speed:</p>
+  <div class="note lec"><div class="lbl">Worth knowing</div><p>An example: two developers build the same app with the same skills, one in Python and one in a compiled language. The Python developer finishes and delivers first. The other takes longer to write it, but their finished app runs faster.</p></div>
+  <p>A fair summary: <em>"There are better languages than Python for making things work quickly. Python is a language for making things work, quickly."</em> For data science that's usually the right deal — and when speed matters, we use the tricks in 1.3 and libraries written in C (1.5). Three design choices cost Python its speed:</p>
 
   <h3>1 · Python is interpreted</h3>
   <p>A <strong>compiled</strong> language (C) is translated once, ahead of time, into machine code the CPU runs directly. Python works in two steps:</p>
   <ol class="steps">
-    <li>Your source code is first <strong>compiled into bytecode</strong> — a simpler, lower-level list of instructions (saved as <code>.pyc</code> files in <code>__pycache__</code>). This is the "compile first" step the slide calls ahead-of-time compilation.</li>
+    <li>Your source code is first <strong>compiled into bytecode</strong> — a simpler, lower-level list of instructions (saved as <code>.pyc</code> files in <code>__pycache__</code>). This is the "compile first" step, sometimes called ahead-of-time compilation.</li>
     <li>The <strong>Python Virtual Machine (PVM)</strong> then reads that bytecode one instruction at a time and carries each one out. That reading-and-dispatching is the "interpreting", and each of your instructions costs many machine instructions.</li>
   </ol>
   <p>You can see the bytecode with the built-in <code>dis</code> (disassembler) module:</p>
@@ -105,12 +105,12 @@ dis.dis(add)</pre>
   </div>
 
 
-  <div class="note lec"><div class="lbl">In the lecture</div><p>As explained in class: a compiler translates the whole program into machine code in one go. An interpreter works one statement at a time: translate a statement, run it, then come back for the next one. That back-and-forth costs time, and it's one of the main reasons Python is slower.</p></div>
+  <div class="note lec"><div class="lbl">Worth knowing</div><p>Compiler vs interpreter: a compiler translates the whole program into machine code in one go. An interpreter works one statement at a time: translate a statement, run it, then come back for the next one. That back-and-forth costs time, and it's one of the main reasons Python is slower.</p></div>
 
   <h3>2 · Python is dynamically typed</h3>
   <p>In C you declare <code>int a = 0;</code> and <code>a</code> can only ever hold an integer, so the compiler knows exactly how to add it. In Python a variable is just a <strong>name stuck on an object</strong>; the name has no type — the object does — and the same name can later point to an object of a completely different type. So every time Python executes <code>a + b</code> it must first check <em>what</em> <code>a</code> and <code>b</code> are right now, then pick the right "+". Flexible for you, extra work for the CPU.</p>
 
-  <div class="note lec"><div class="lbl">In the lecture</div><p>The lecturer's walk-through: with <code>a = 0</code>, Python only learns at run time that the value is an integer, and reserves space for one. Later, <code>a = "…a long string…"</code> no longer fits, so Python has to find a new, bigger place in memory. This can happen many times while the program runs. In C the type is fixed before the program starts, so the memory is reserved once.</p></div>
+  <div class="note lec"><div class="lbl">Worth knowing</div><p>Step by step: with <code>a = 0</code>, Python only learns at run time that the value is an integer, and reserves space for one. Later, <code>a = "…a long string…"</code> no longer fits, so Python has to find a new, bigger place in memory. This can happen many times while the program runs. In C the type is fixed before the program starts, so the memory is reserved once.</p></div>
   <div class="cell" data-label="the same name, different types"><pre class="py">a = 0
 print(type(a))
 a = "zero"
@@ -144,7 +144,7 @@ print(type(a))</pre>
 
 <section class="section" id="s-tips">
   <div class="sec-head"><span class="sec-num">1.3</span><h2>Making Python faster: the habits</h2></div>
-  <p>The lecture's key sentence: <strong>improving the performance of a Python program is the programmer's problem.</strong> Python won't optimise for you, so these habits matter. First, measure: the <code>timeit</code> module runs a piece of code many times and tells you how long it took.</p>
+  <p>The key sentence: <strong>improving the performance of a Python program is the programmer's problem.</strong> Python won't optimise for you, so these habits matter. First, measure: the <code>timeit</code> module runs a piece of code many times and tells you how long it took.</p>
   <div class="cell" data-label="how to measure: timeit"><pre class="py">import timeit
 
 seconds = timeit.timeit("sum(range(1000))", number=10000)
@@ -189,7 +189,7 @@ account.balance</pre>
 
   <h3>Avoid global variables</h3>
   <p>Inside a function, Python finds <strong>local</strong> variables by position in a fast array, but <strong>global</strong> variables by looking up a dictionary — slower, every single time. The lab's "local vs global" race shows the difference.</p>
-  <div class="note lec"><div class="lbl">In the lecture</div><p>The demo in class built a string 50 times inside a function and timed it with <code>timeit</code>: about <b>1.68 s</b> using a global variable vs <b>1.59 s</b> using a local one. That's a small gap, but it grows with the number of operations.</p></div>
+  <div class="note lec"><div class="lbl">Worth knowing</div><p>A typical measurement: build a string 50 times inside a function and time it with <code>timeit</code>. It took about <b>1.68 s</b> using a global variable vs <b>1.59 s</b> using a local one. That's a small gap, but it grows with the number of operations.</p></div>
 
   <h3>Use multiple assignment</h3>
   <div class="cell" data-label="several assignments in one line, and the classic swap"><pre class="py">x, y, z = 1, 2, 3
@@ -233,13 +233,13 @@ print(even_squares)</pre>
   <pre class="o">[0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
 [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
 [0, 4, 16, 36, 64]</pre></div>
-  <div class="note lec"><div class="lbl">In the lecture</div><p>In class, squaring every number up to 500 took about <b>20</b> with a <code>for</code> loop and <b>12–13</b> with a list comprehension (roughly 7 seconds faster). The lecturer stressed that small differences matter in real-time systems such as medical or military applications, where even 0.001 s can count. Loops in general, and <code>for</code> loops especially, are where programs spend most of their time, so they're the first place to optimise.</p></div>
+  <div class="note lec"><div class="lbl">Worth knowing</div><p>A typical measurement: squaring every number up to 500 took about <b>20</b> seconds with a <code>for</code> loop and <b>12–13</b> with a list comprehension (roughly 7 seconds faster). Small differences matter in real-time systems such as medical or military applications, where even 0.001 s can count. Loops in general, and <code>for</code> loops especially, are where programs spend most of their time, so they're the first place to optimise.</p></div>
 
   <h3>Optimise your loops</h3>
   <ul>
     <li><strong>"Use 1 for infinite loops"</strong> — <code>while 1:</code> instead of <code>while True:</code>. This was a real speed-up in Python 2, where <code>True</code> was a variable that had to be looked up. In Python 3 both compile to the <em>same</em> bytecode — check it in the bytecode viewer above.</li>
     <li><strong>Use sets and union</strong> to combine or de-duplicate collections instead of nested loops.</li>
-    <li><strong>"while instead of for"</strong> — the slide's tip. In modern CPython a <code>for … in range()</code> loop is usually <em>faster</em> than a <code>while</code> loop with a manual counter, because the counting happens in C. Race them in the Speed Lab ("for vs while") and see for yourself.</li>
+    <li><strong>"while instead of for"</strong> — an often-repeated tip. In modern CPython a <code>for … in range()</code> loop is usually <em>faster</em> than a <code>while</code> loop with a manual counter, because the counting happens in C. Race them in the Speed Lab ("for vs while") and see for yourself.</li>
   </ul>
   <div class="cell" data-label="sets: union and de-duplication without loops"><pre class="py">group_a = {"Ahmed", "Salma", "Omar"}
 group_b = {"Omar", "Mona"}
@@ -249,7 +249,7 @@ print(set([1, 1, 2, 3, 3]))   # remove duplicates</pre>
   <pre class="o">{'Salma', 'Ahmed', 'Omar', 'Mona'}
 {'Omar'}
 {1, 2, 3}</pre></div>
-  <div class="note lec"><div class="lbl">In the lecture</div><p>The class example: find the items two lists have in common. Using nested loops (compare every item of the first list with every item of the second) vs converting both to sets and taking the intersection <code>set_a &amp; set_b</code>. The set version took about <b>half the time</b>.</p></div>
+  <div class="note lec"><div class="lbl">Worth knowing</div><p>An example: find the items two lists have in common. Using nested loops (compare every item of the first list with every item of the second) vs converting both to sets and taking the intersection <code>set_a &amp; set_b</code>. The set version took about <b>half the time</b>.</p></div>
 
   <h3>Optimise your conditions</h3>
   <ul>
@@ -278,7 +278,7 @@ print(", ".join(str(n) for n in range(5)))</pre>
   <h3>Be lazy with your imports</h3>
   <ul>
     <li><code>from math import sqrt</code> imports just what you need and lets you call <code>sqrt(x)</code> directly.</li>
-    <li><code>from math import *</code> dumps every name from <code>math</code> into your program. It's on the slide, but PEP 8 recommends avoiding it: you can't tell where a name came from, and it can silently overwrite your own variables.</li>
+    <li><code>from math import *</code> dumps every name from <code>math</code> into your program. You'll see it in tutorials, but PEP 8 recommends avoiding it: you can't tell where a name came from, and it can silently overwrite your own variables.</li>
     <li>"Lazy" also means importing a heavy library only inside the function that needs it, so the program starts faster.</li>
   </ul>
 
@@ -286,7 +286,7 @@ print(", ".join(str(n) for n in range(5)))</pre>
   <p>Every <code>.</code> is a lookup at run time. Inside a hot loop, <code>math.sqrt(x)</code> looks up <code>math</code>, then <code>sqrt</code> on it, every iteration. Saving it in a local name first (<code>sqrt = math.sqrt</code>, or <code>from math import sqrt</code>) skips that work — race it in the lab ("dot lookups").</p>
 
   <h3>Use libraries and built-in functions — don't reinvent the wheel</h3>
-  <div class="note lec"><div class="lbl">In the lecture</div><p>“If you need a neural network, don't write one from scratch.” One of Python's biggest strengths is its huge community and number of libraries. Before building something, search for it — it has most likely been implemented already, and you only need to import it.</p></div>
+  <div class="note lec"><div class="lbl">Worth knowing</div><p>“If you need a neural network, don't write one from scratch.” One of Python's biggest strengths is its huge community and number of libraries. Before building something, search for it — it has most likely been implemented already, and you only need to import it.</p></div>
   <div class="cell" data-label="built-ins are written in C"><pre class="py">numbers = [4, 8, 15, 16, 23, 42]
 
 total = 0
@@ -300,11 +300,11 @@ print(sum(numbers), max(numbers), sorted(numbers, reverse=True))</pre>
 </section>
 
 <section class="section" id="s-map">
-  <div class="sec-head"><span class="sec-num">1.4</span><h2>The advanced tools this course covers</h2></div>
+  <div class="sec-head"><span class="sec-num">1.4</span><h2>The advanced tools in these notes</h2></div>
   <div class="grid">
-    <div class="obj"><div class="ty">lecture <b>2</b></div><div class="bd"><h4>Object-oriented programming</h4><p>Bundle data and behaviour into classes and objects. Metaclasses are classes that create classes.</p></div></div>
-    <div class="obj"><div class="ty">lecture <b>3</b></div><div class="bd"><h4>Decorators</h4><p>Change what a function or class does without editing it.</p></div></div>
-    <div class="obj"><div class="ty">lecture <b>3</b></div><div class="bd"><h4>Generators</h4><p>Loop over huge data sets one item at a time without loading everything into memory.</p></div></div>
+    <div class="obj"><div class="ty">chapter <b>2</b></div><div class="bd"><h4>Object-oriented programming</h4><p>Bundle data and behaviour into classes and objects. Metaclasses are classes that create classes.</p></div></div>
+    <div class="obj"><div class="ty">chapter <b>3</b></div><div class="bd"><h4>Decorators</h4><p>Change what a function or class does without editing it.</p></div></div>
+    <div class="obj"><div class="ty">chapter <b>3</b></div><div class="bd"><h4>Generators</h4><p>Loop over huge data sets one item at a time without loading everything into memory.</p></div></div>
     <div class="obj"><div class="ty">upcoming</div><div class="bd"><h4>Debugging, error handling, profiling</h4><p>Find bugs, handle errors gracefully, and find out which part of the code is slow.</p></div></div>
   </div>
   <p>A taste of <strong>profiling</strong>: <code>cProfile</code> runs your code and reports how much time each function took — so you optimise the part that matters instead of guessing.</p>
@@ -364,7 +364,7 @@ print(f"Python list: {t_loop:.4f} s")
 print(f"NumPy array: {t_numpy:.4f} s  ->  about {t_loop / t_numpy:.0f}x faster")</pre>
   <pre class="o">Python list: 0.4982 s
 NumPy array: 0.0087 s  -&gt;  about 57x faster</pre></div>
-  <p>The lecture also lists two more ways to go faster when a single core isn't enough: <strong>multiprocessing / parallel programming</strong> (several processes at once, side-stepping the GIL) and <strong>GPU acceleration</strong> (thousands of small cores, used by deep-learning libraries).</p>
+  <p>There are two more ways to go faster when a single core isn't enough: <strong>multiprocessing / parallel programming</strong> (several processes at once, side-stepping the GIL) and <strong>GPU acceleration</strong> (thousands of small cores, used by deep-learning libraries).</p>
 </section>
 
 <section class="section" id="s-big">
@@ -398,27 +398,10 @@ sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:4]</pre>
   <pre class="o" data-out="expr">[('data', 3), ('python', 2), ('big', 2), ('science', 1)]</pre></div>
 </section>
 
-<section class="section" id="s-logistics">
-  <div class="sec-head"><span class="sec-num">1.7</span><h2>Course logistics</h2></div>
-  <div class="table-wrap"><table class="t">
-    <tr><th>Component</th><th>Weight</th></tr>
-    <tr><td>Assignments</td><td class="mono">10%</td></tr>
-    <tr><td>Project</td><td class="mono">30%</td></tr>
-    <tr><td>Final exam</td><td class="mono">60%</td></tr>
-  </table></div>
-  <ul>
-    <li><strong>Assignments (10%)</strong> — the deadline is strict. The lecturer was clear that work submitted after the deadline, even by half a minute, won't be accepted.</li>
-    <li><strong>Project (30%)</strong> — at the end of the semester, in teams of 2–3 students (no more than 3). Apply what the course covers with Python libraries: machine learning, deep learning or data analysis. There's a discussion/presentation of each project.</li>
-    <li><strong>Final exam (60%)</strong>.</li>
-  </ul>
-  <p>References are given inside each lecture.</p>
-  <div class="note lec"><div class="lbl">In the lecture</div><p>Later in the course, if time allows: Python on the GPU (to speed up execution), and the Apache Hadoop and Apache Spark tools from 1.6.</p></div>
-</section>
-
 <section class="section" id="s-quiz">
   <div class="sec-head"><span class="sec-num">✓</span><h2>Check yourself</h2></div>
   <div class="quiz" data-id="l1">
-    <div class="quiz-top"><h3>Lecture 1 quiz</h3><span class="quiz-score"></span></div>
+    <div class="quiz-top"><h3>Chapter 1 quiz</h3><span class="quiz-score"></span></div>
     <div class="q" data-a="2"><div class="q-text">What happens to your <code>.py</code> file before the Python Virtual Machine runs it?</div>
       <div class="q-opts"><button class="q-opt">It is compiled straight to machine code</button><button class="q-opt">Nothing — the PVM reads the text line by line</button><button class="q-opt">It is compiled into bytecode, which the PVM then interprets</button><button class="q-opt">It is converted to C</button></div>
       <div class="q-fb">Source → bytecode (<code>dis</code> shows it) → interpreted by the PVM. That interpretation step is a big part of why Python is slower than C.</div></div>
@@ -561,7 +544,7 @@ document.addEventListener('ds:ready', () => {
       builtin: { name: 'manual sum vs sum()', a: ['for loop total', 'def run():\n    total = 0\n    for i in range(10000):\n        total += i\n    return total'], b: ['built-in sum()', 'def run():\n    return sum(range(10000))'], n: 100,
         exp: '<b>sum()</b> is written in C, so the whole loop happens outside the interpreter. Don\'t reinvent the wheel.' },
       forwhile: { name: 'for vs while', a: ['while + counter', 'def run():\n    i = 0\n    total = 0\n    while i < 10000:\n        total += i\n        i += 1\n    return total'], b: ['for + range', 'def run():\n    total = 0\n    for i in range(10000):\n        total += i\n    return total'], n: 100,
-        exp: 'The slide suggests <i>while instead of for</i>, but in modern Python the <b>for</b> loop usually wins: <b>range</b> does the counting in C, while the <b>while</b> loop runs an extra comparison and addition in Python every iteration. Always measure tips yourself!' }
+        exp: 'A common tip says <i>while instead of for</i>, but in modern Python the <b>for</b> loop usually wins: <b>range</b> does the counting in C, while the <b>while</b> loop runs an extra comparison and addition in Python every iteration. Always measure tips yourself!' }
     };
     let cur = 'comp';
     $('#sp-btns').innerHTML = Object.entries(RACES).map(([k, r]) => `<button class="btn ${k === cur ? 'on' : ''}" data-r="${k}">${r.name}</button>`).join('');

@@ -1,12 +1,12 @@
 # Advanced Programming for Data Science
 
-Interactive study notes for DS588 (Diploma in Data Science, semester 2). Every Python example from the course is explained in plain language, with its real output, interactive demos, notes from the lectures and a quiz for each lecture.
+Free interactive notes for anyone who knows basic Python and wants to write faster, cleaner code for data science. Every example is explained in plain language, with its real output, interactive demos and a quiz for each chapter.
 
 **Live site:** https://omarmuhammadkhattab.github.io/AdvancedProgrammingForDataScience/
 
 ## Contents
 
-| Lecture | Topic |
+| Chapter | Topic |
 |---------|-------|
 | 01 | Writing fast Python: why Python is slow (interpreter, dynamic typing, the GIL), speed habits such as local variables, list comprehensions, sets and `join`, data science libraries, Hadoop and Spark |
 | 02 | Object-oriented programming: classes, `__init__` and `self`, class vs instance attributes, inheritance, polymorphism, encapsulation |
@@ -18,5 +18,5 @@ Interactive study notes for DS588 (Diploma in Data Science, semester 2). Every P
 - **Plain words first:** every idea is explained without jargon before the code
 - **Live Python:** real Python runs in the browser (Pyodide); every cell can be edited and re-run
 - **Interactive demos:** class vs instance attributes, method lookup, name mangling, a decorator stack builder, a generator stepper and more
-- **In the lecture:** the points the lecturer made in class, next to the code they belong to
-- **Quizzes** with explanations at the end of each lecture
+- **Worth knowing:** analogies, real timings and practical advice next to the code they belong to
+- **Quizzes** with explanations at the end of each chapter

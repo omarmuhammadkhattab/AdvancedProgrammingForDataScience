@@ -1,13 +1,13 @@
-/* DS588 Advanced Programming for Data Science — page chrome, notebook cells, in-browser Python kernel, quizzes */
+/* Advanced Programming for Data Science — page chrome, notebook cells, in-browser Python kernel, quizzes */
 (function () {
   'use strict';
 
   const PAGES = [
-    { id: 'home', href: 'index.html', short: 'Home', title: 'Course home' },
-    { id: 'l1', href: 'lecture1.html', short: 'L1', title: 'Introduction: Python & Performance' },
-    { id: 'l2', href: 'lecture2.html', short: 'L2', title: 'Object-Oriented Programming' },
-    { id: 'l3', href: 'lecture3.html', short: 'L3', title: 'Decorators, Metaclasses & Generators' },
-    { id: 'ref', href: 'reference.html', short: 'Cheat sheet', title: 'Cheat sheet' }
+    { id: 'home', href: 'index.html', short: 'Home', title: 'Home' },
+    { id: 'l1', href: 'lecture1.html', short: 'Ch 1', title: 'Introduction: Python & Performance' },
+    { id: 'l2', href: 'lecture2.html', short: 'Ch 2', title: 'Object-Oriented Programming' },
+    { id: 'l3', href: 'lecture3.html', short: 'Ch 3', title: 'Decorators, Metaclasses & Generators' },
+    { id: 'ref', href: 'reference.html', short: 'Syntax', title: 'Cheat sheet' }
   ];
   window.DS_PAGES = PAGES;
 
@@ -30,7 +30,7 @@
     const id = document.body.dataset.page || 'home';
     const bar = document.createElement('nav');
     bar.className = 'topbar';
-    bar.innerHTML = `<a class="brand" href="index.html"><span class="prompt">&gt;&gt;&gt;</span><span class="t">Advanced Programming for Data Science</span><span class="code">DS588</span></a>
+    bar.innerHTML = `<a class="brand" href="index.html"><span class="prompt">&gt;&gt;&gt;</span><span class="t">Advanced Programming for Data Science</span></a>
       <div class="links">${PAGES.map(p => `<a href="${p.href}" class="${p.id === id ? 'active' : ''}">${p.short}</a>`).join('')}</div>
       <button class="theme-btn" type="button" aria-label="Switch light or dark theme" title="Light / dark">◐</button>`;
     document.body.prepend(bar);
@@ -45,7 +45,7 @@
       nav.innerHTML = (prev ? `<a href="${prev.href}"><span>← previous</span>${prev.title}</a>` : '') + (next ? `<a class="next" href="${next.href}"><span>next →</span>${next.title}</a>` : '');
     }
     const f = document.createElement('footer'); f.className = 'site';
-    f.innerHTML = 'DS588 · Advanced Programming for Data Science — interactive study notes built from the lecture slides and notebooks.<br>Static outputs come from running the lecture notebooks in Python; every cell can also be re-run live in your browser.';
+    f.innerHTML = 'Advanced Programming for Data Science — free interactive notes on writing better Python for data science.<br>Saved outputs come from running every cell in Python 3.12; every cell can also be re-run live in your browser.';
     document.body.appendChild(f);
     const v = store.get('visited', {}); v[id] = true; store.set('visited', v);
   }
