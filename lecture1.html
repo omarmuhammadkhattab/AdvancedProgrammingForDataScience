@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L1 · Python &amp; Performance — DS588</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/site.js"></script>
+</head>
+<body data-page="l1">
+
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="eyebrow">lecture 1 <b>·</b> introduction</div>
+      <h1>Python is slow. <span class="u">Your code</span> doesn't have to be.</h1>
+      <p class="lead">What Python is, the three design choices that make it slower than C (interpreted, dynamically typed, single-threaded), and the practical habits that make your programs faster — each one measured live in the Speed Lab, so you can see which tips really pay off. Then a map of the course: OOP, decorators, generators, profiling, the data-science libraries and big data.</p>
+      <div class="tags"><span>bytecode</span><span>dynamic typing</span><span>GIL</span><span>list comprehension</span><span>join</span><span>set vs list</span><span>timeit</span><span>numpy</span><span>Spark</span></div>
+      <div class="meta"><span><b>Source:</b> DS588 Lecture 1.pdf (Salma Alhagry)</span><span><b>Video:</b> Lecture 1</span></div>
+    </div>
+    <div class="repl" aria-hidden="true"><span class="p">&gt;&gt;&gt;</span> import this<br><span class="o">Beautiful is better than ugly.</span><br><span class="o">Simple is better than complex.</span><br><span class="o">Readability counts.</span><br><span class="p">&gt;&gt;&gt;</span> type(Python)<br><span class="o">&lt;class 'easy-to-write, slow-to-run'&gt;</span><br><span class="p">&gt;&gt;&gt;</span> <span class="cursor"></span></div>
+  </div>
+</header>
+
+<div class="page">
+<main class="content">
+
+<section class="section" id="s-what">
+  <div class="sec-head"><span class="sec-num">1.1</span><h2>What is Python?</h2></div>
+  <p>Python is a <strong>general-purpose</strong> programming language created by <strong>Guido van Rossum</strong>, first released in <strong>1991</strong>. "General-purpose" means it isn't built for one job: the same language runs websites, automates files, controls robots and — our focus — analyses data. It is famous for being <strong>versatile, flexible and easy to learn</strong>, and it has one of the biggest communities on GitHub, Stack Overflow and Meetup, which means almost any problem you hit has already been asked and answered.</p>
+  <div class="note plain"><div class="lbl">In plain English</div><p>Every cell on this page is a real Python cell, like in Jupyter. Press <b>▶ run</b> to execute it in your browser (the first run downloads Python, about 10 MB), or <b>✎ edit</b> to change it and experiment. Cells share their variables top to bottom, exactly like a notebook.</p></div>
+  <div class="cell" data-label="which Python is this?"><pre class="py">import sys
+print(sys.version)</pre>
+  <pre class="o">3.12.1 (main, Nov 15 2024, 14:17:00) [Clang 19.0.0git (https:/github.com/llvm/llvm-project 0a8cd1ed1f4f35905df318015b</pre></div>
+  <div class="cell" data-label="the Zen of Python — Python's design philosophy"><pre class="py">import this</pre>
+  <pre class="o">The Zen of Python, by Tim Peters
+
+Beautiful is better than ugly.
+Explicit is better than implicit.
+Simple is better than complex.
+Complex is better than complicated.
+Flat is better than nested.
+Sparse is better than dense.
+Readability counts.
+Special cases aren't special enough to break the rules.
+Although practicality beats purity.
+Errors should never pass silently.
+Unless explicitly silenced.
+In the face of ambiguity, refuse the temptation to guess.
+There should be one-- and preferably only one --obvious way to do it.
+Although that way may not be obvious at first unless you're Dutch.
+Now is better than never.
+Although never is often better than *right* now.
+If the implementation is hard to explain, it's a bad idea.
+If the implementation is easy to explain, it may be a good idea.
+Namespaces are one honking great idea -- let's do more of those!</pre></div>
+  <p>"Readability counts" and "Simple is better than complex" aren't decoration: they explain the trade-off the next section is about.</p>
+</section>
+
+<section class="section" id="s-slow">
+  <div class="sec-head"><span class="sec-num">1.2</span><h2>Why is Python slow?</h2></div>
+  <p>First, a mindset: there are two kinds of time.</p>
+  <div class="grid">
+    <div class="obj"><div class="ty">time &lt;<b>engineer</b>&gt;</div><div class="bd"><h4>Your time</h4><p>How fast you can <em>write</em> the code and how fast you can <em>change</em> it. Python is excellent here.</p></div></div>
+    <div class="obj"><div class="ty">time &lt;<b>CPU</b>&gt;</div><div class="bd"><h4>The computer's time</h4><p>How fast the finished program <em>runs</em>. Languages like C, C++ or Rust beat Python here.</p></div></div>
+  </div>
+
+  <div class="note lec"><div class="lbl">In the lecture</div><p>The lecturer's example: two developers build the same app with the same skills, one in Python and one in a compiled language. The Python developer finishes and delivers first. The other takes longer to write it, but their finished app runs faster.</p></div>
+  <p>The lecture's summary: <em>"There are better languages than Python for making things work quickly. Python is a language for making things work, quickly."</em> For data science that's usually the right deal — and when speed matters, we use the tricks in 1.3 and libraries written in C (1.5). Three design choices cost Python its speed:</p>
+
+  <h3>1 · Python is interpreted</h3>
+  <p>A <strong>compiled</strong> language (C) is translated once, ahead of time, into machine code the CPU runs directly. Python works in two steps:</p>
+  <ol class="steps">
+    <li>Your source code is first <strong>compiled into bytecode</strong> — a simpler, lower-level list of instructions (saved as <code>.pyc</code> files in <code>__pycache__</code>). This is the "compile first" step the slide calls ahead-of-time compilation.</li>
+    <li>The <strong>Python Virtual Machine (PVM)</strong> then reads that bytecode one instruction at a time and carries each one out. That reading-and-dispatching is the "interpreting", and each of your instructions costs many machine instructions.</li>
+  </ol>
+  <p>You can see the bytecode with the built-in <code>dis</code> (disassembler) module:</p>
+  <div class="cell" data-label="the bytecode behind a tiny function"><pre class="py">import dis
+
+def add(a, b):
+    return a + b
+
+dis.dis(add)</pre>
+  <pre class="o">  3           0 RESUME                   0
+
+  4           2 LOAD_FAST                0 (a)
+              4 LOAD_FAST                1 (b)
+              6 BINARY_OP                0 (+)
+             10 RETURN_VALUE</pre></div>
+  <div class="lab" id="lab-dis">
+    <div class="lab-head"><span class="badge">lab</span><span class="title">Bytecode viewer — write any function, see what the PVM runs</span></div>
+    <div class="lab-body">
+      <textarea class="txt" id="dis-src" spellcheck="false" style="width:100%;min-height:120px;font-family:var(--f-mono)">def total(numbers):
+    s = 0
+    for n in numbers:
+        s = s + n
+    return s</textarea>
+      <div class="row"><button class="btn primary" id="dis-run">disassemble ▶</button><button class="btn" data-ex="while">example: while 1 vs while True</button><button class="btn" data-ex="comp">example: list comprehension</button></div>
+      <pre class="hl-py" id="dis-out" style="font-family:var(--f-mono);font-size:.78rem;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:.7rem .9rem;max-height:340px;overflow:auto;white-space:pre">(press disassemble)</pre>
+      <div class="explain">Each line is one bytecode instruction: <b>LOAD_FAST</b> fetches a local variable, <b>BINARY_OP</b> does the +, <b>RETURN_VALUE</b> returns. More instructions ≈ more work for the interpreter.</div>
+    </div>
+  </div>
+
+
+  <div class="note lec"><div class="lbl">In the lecture</div><p>As explained in class: a compiler translates the whole program into machine code in one go. An interpreter works one statement at a time: translate a statement, run it, then come back for the next one. That back-and-forth costs time, and it's one of the main reasons Python is slower.</p></div>
+
+  <h3>2 · Python is dynamically typed</h3>
+  <p>In C you declare <code>int a = 0;</code> and <code>a</code> can only ever hold an integer, so the compiler knows exactly how to add it. In Python a variable is just a <strong>name stuck on an object</strong>; the name has no type — the object does — and the same name can later point to an object of a completely different type. So every time Python executes <code>a + b</code> it must first check <em>what</em> <code>a</code> and <code>b</code> are right now, then pick the right "+". Flexible for you, extra work for the CPU.</p>
+
+  <div class="note lec"><div class="lbl">In the lecture</div><p>The lecturer's walk-through: with <code>a = 0</code>, Python only learns at run time that the value is an integer, and reserves space for one. Later, <code>a = "…a long string…"</code> no longer fits, so Python has to find a new, bigger place in memory. This can happen many times while the program runs. In C the type is fixed before the program starts, so the memory is reserved once.</p></div>
+  <div class="cell" data-label="the same name, different types"><pre class="py">a = 0
+print(type(a))
+a = "zero"
+print(type(a))
+a = [0, 0, 0]
+print(type(a))</pre>
+  <pre class="o">&lt;class 'int'&gt;
+&lt;class 'str'&gt;
+&lt;class 'list'&gt;</pre></div>
+  <div class="lab" id="lab-names">
+    <div class="lab-head"><span class="badge">see it</span><span class="title">Names point at objects</span></div>
+    <div class="lab-body">
+      <div class="row"><button class="btn" id="nm-prev">← back</button><button class="btn primary" id="nm-next">next line →</button><span class="mono small" id="nm-step" style="font-family:var(--f-mono)"></span></div>
+      <svg class="dia" id="nm-svg" viewBox="0 0 640 230"></svg>
+      <div class="explain" id="nm-exp"></div>
+    </div>
+  </div>
+
+  <h3>3 · Python is single-threaded (the GIL)</h3>
+  <p>A modern CPU has several cores. A program can split work into <strong>threads</strong> to use them at the same time. Standard Python (CPython) has a <strong>Global Interpreter Lock (GIL)</strong>: a single lock that a thread must hold to run Python bytecode. Only one thread can hold it at a time — so even with many threads, only one is executing Python code at any moment. Pure-Python number crunching therefore can't use more than one core.</p>
+  <div class="lab" id="lab-gil">
+    <div class="lab-head"><span class="badge">see it</span><span class="title">Three threads, one lock</span></div>
+    <div class="lab-body">
+      <div class="row"><span class="seg"><button class="btn on" data-g="cpu">CPU-bound work</button><button class="btn" data-g="io">I/O-bound work (downloads, files)</button></span><button class="btn yellow" id="gil-play">▶ play</button></div>
+      <svg class="dia" id="gil-svg" viewBox="0 0 640 190"></svg>
+      <div class="explain" id="gil-exp"></div>
+    </div>
+  </div>
+  <div class="note key"><div class="lbl">Good to know</div><ul><li>Threads <em>do</em> help when the work is waiting on input/output (network, disk): a thread releases the GIL while it waits.</li><li>For CPU-heavy work, Python uses <strong>multiprocessing</strong> (several processes, each with its own interpreter and GIL) — or libraries like NumPy that do the heavy lifting in C outside the GIL.</li><li>Python 3.13 (2024) added an experimental "free-threaded" build without the GIL; it isn't the default yet.</li></ul></div>
+</section>
+
+<section class="section" id="s-tips">
+  <div class="sec-head"><span class="sec-num">1.3</span><h2>Making Python faster: the habits</h2></div>
+  <p>The lecture's key sentence: <strong>improving the performance of a Python program is the programmer's problem.</strong> Python won't optimise for you, so these habits matter. First, measure: the <code>timeit</code> module runs a piece of code many times and tells you how long it took.</p>
+  <div class="cell" data-label="how to measure: timeit"><pre class="py">import timeit
+
+seconds = timeit.timeit("sum(range(1000))", number=10000)
+print(f"10,000 runs took {seconds:.3f} s")</pre>
+  <pre class="o">10,000 runs took 1.222 s</pre></div>
+
+  <div class="lab" id="lab-speed">
+    <div class="lab-head"><span class="badge">speed lab</span><span class="title">Does the tip really help? Time it in real Python</span></div>
+    <div class="lab-body">
+      <p class="hint">Pick a tip and press run. Both versions do exactly the same job; the bars show how long each took in <b>your browser's</b> Python (absolute numbers are slower than desktop Python, but the comparison holds).</p>
+      <div class="row" id="sp-btns"></div>
+      <pre class="hl-py" id="sp-code" style="font-family:var(--f-mono);font-size:.8rem;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:.7rem .9rem;overflow:auto;white-space:pre"></pre>
+      <div class="row"><button class="btn yellow" id="sp-run">▶ run the race</button><span class="small muted" id="sp-status"></span></div>
+      <div class="bars" id="sp-bars"></div>
+      <div class="explain" id="sp-exp"></div>
+    </div>
+  </div>
+
+  <h3>Use the latest Python release</h3>
+  <p>Each new version gets faster for free. Python 3.11, for example, was about 25% faster than 3.10 on average, because the interpreter learned to specialise bytecode for the types it actually sees.</p>
+
+  <h3>Keep your code simple and readable</h3>
+  <ul>
+    <li><strong>Meaningful names</strong> for variables and functions: <code>total_price</code>, not <code>tp</code>.</li>
+    <li><strong>Whitespace and indentation</strong> — in Python indentation is part of the syntax.</li>
+    <li><strong>Comments</strong> that explain <em>why</em>, not what.</li>
+    <li><strong>Naming conventions</strong> (PEP 8): <code>snake_case</code> for variables and functions, <code>CamelCase</code> for class names.</li>
+    <li><strong>Small, focused functions</strong> — each does one thing. It also helps you spot and delete <em>dead code</em> (code that never runs).</li>
+  </ul>
+  <div class="cell" data-label="naming conventions in one cell"><pre class="py">class BankAccount:                 # CamelCase for classes
+    def __init__(self, owner_name):  # snake_case for functions and variables
+        self.owner_name = owner_name
+        self.balance = 0
+
+    def deposit(self, amount):       # small and focused: does one thing
+        self.balance += amount
+
+account = BankAccount("Omar")
+account.deposit(500)
+account.balance</pre>
+  <pre class="o" data-out="expr">500</pre></div>
+
+  <h3>Avoid global variables</h3>
+  <p>Inside a function, Python finds <strong>local</strong> variables by position in a fast array, but <strong>global</strong> variables by looking up a dictionary — slower, every single time. The lab's "local vs global" race shows the difference.</p>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>The demo in class built a string 50 times inside a function and timed it with <code>timeit</code>: about <b>1.68 s</b> using a global variable vs <b>1.59 s</b> using a local one. That's a small gap, but it grows with the number of operations.</p></div>
+
+  <h3>Use multiple assignment</h3>
+  <div class="cell" data-label="several assignments in one line, and the classic swap"><pre class="py">x, y, z = 1, 2, 3
+print(x, y, z)
+
+x, y = y, x          # swap without a temporary variable
+print(x, y)</pre>
+  <pre class="o">1 2 3
+2 1</pre></div>
+
+  <h3>Choose the right data structure</h3>
+  <div class="table-wrap"><table class="t">
+    <tr><th>Structure</th><th>Example</th><th>Key property</th><th>Use it when…</th></tr>
+    <tr><td><strong>list</strong></td><td class="mono">[3, "a", 2.5]</td><td>ordered, changeable, can mix types</td><td>you need a sequence you'll add to or change</td></tr>
+    <tr><td><strong>dict</strong></td><td class="mono">{"name": "Omar"}</td><td>key → value, very fast lookup by key</td><td>you look things up by a name/ID</td></tr>
+    <tr><td><strong>tuple</strong></td><td class="mono">(30.04, 31.23)</td><td>ordered, <strong>immutable</strong> (can't change)</td><td>fixed records, coordinates, dictionary keys</td></tr>
+    <tr><td><strong>set</strong></td><td class="mono">{1, 2, 3}</td><td>no duplicates, very fast "is x in it?"</td><td>uniqueness and membership tests</td></tr>
+  </table></div>
+  <div class="cell" data-label="each structure in action"><pre class="py">scores = [70, 85, 85, 90]            # list: keeps order and duplicates
+ages = {"Omar": 30, "Salma": 28}      # dict: lookup by key
+point = (30.04, 31.23)                # tuple: fixed
+unique_scores = set(scores)           # set: duplicates removed
+
+print(scores, ages["Salma"], point, unique_scores)
+point[0] = 0                          # tuples can't be changed</pre>
+  <pre class="o err">[70, 85, 85, 90] 28 (30.04, 31.23) {90, 85, 70}
+TypeError: 'tuple' object does not support item assignment</pre></div>
+
+  <h3>Use list comprehensions</h3>
+  <p>A list comprehension builds a list in one expression. It's shorter <em>and</em> faster than a <code>for</code> loop with <code>.append()</code>, because the looping happens inside optimised interpreter code.</p>
+  <div class="cell" data-label="loop vs comprehension — same result"><pre class="py">squares = []
+for n in range(10):
+    squares.append(n * n)
+print(squares)
+
+squares = [n * n for n in range(10)]
+print(squares)
+
+even_squares = [n * n for n in range(10) if n % 2 == 0]
+print(even_squares)</pre>
+  <pre class="o">[0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+[0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+[0, 4, 16, 36, 64]</pre></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>In class, squaring every number up to 500 took about <b>20</b> with a <code>for</code> loop and <b>12–13</b> with a list comprehension (roughly 7 seconds faster). The lecturer stressed that small differences matter in real-time systems such as medical or military applications, where even 0.001 s can count. Loops in general, and <code>for</code> loops especially, are where programs spend most of their time, so they're the first place to optimise.</p></div>
+
+  <h3>Optimise your loops</h3>
+  <ul>
+    <li><strong>"Use 1 for infinite loops"</strong> — <code>while 1:</code> instead of <code>while True:</code>. This was a real speed-up in Python 2, where <code>True</code> was a variable that had to be looked up. In Python 3 both compile to the <em>same</em> bytecode — check it in the bytecode viewer above.</li>
+    <li><strong>Use sets and union</strong> to combine or de-duplicate collections instead of nested loops.</li>
+    <li><strong>"while instead of for"</strong> — the slide's tip. In modern CPython a <code>for … in range()</code> loop is usually <em>faster</em> than a <code>while</code> loop with a manual counter, because the counting happens in C. Race them in the Speed Lab ("for vs while") and see for yourself.</li>
+  </ul>
+  <div class="cell" data-label="sets: union and de-duplication without loops"><pre class="py">group_a = {"Ahmed", "Salma", "Omar"}
+group_b = {"Omar", "Mona"}
+print(group_a | group_b)      # union
+print(group_a &amp; group_b)      # intersection
+print(set([1, 1, 2, 3, 3]))   # remove duplicates</pre>
+  <pre class="o">{'Salma', 'Ahmed', 'Omar', 'Mona'}
+{'Omar'}
+{1, 2, 3}</pre></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>The class example: find the items two lists have in common. Using nested loops (compare every item of the first list with every item of the second) vs converting both to sets and taking the intersection <code>set_a &amp; set_b</code>. The set version took about <b>half the time</b>.</p></div>
+
+  <h3>Optimise your conditions</h3>
+  <ul>
+    <li><strong>Exit early</strong>: return as soon as you know the answer, so the rest of the code doesn't run.</li>
+    <li><strong>Don't compare with True</strong>: write <code>if is_valid:</code>, not <code>if is_valid == True:</code>.</li>
+  </ul>
+  <div class="cell" data-label="exit early"><pre class="py">def has_negative(numbers):
+    for n in numbers:
+        if n &lt; 0:
+            return True        # stop at the first one, don't check the rest
+    return False
+
+is_valid = has_negative([5, 3, -1, 8, 9])
+if is_valid:                   # not: if is_valid == True
+    print("found a negative number")</pre>
+  <pre class="o">found a negative number</pre></div>
+
+  <h3>Use join to concatenate strings</h3>
+  <p>Strings are immutable: <code>s = s + "x"</code> builds a brand-new string each time, copying everything so far. <code>"".join(pieces)</code> builds the result once.</p>
+  <div class="cell" data-label="join"><pre class="py">words = ["Python", "is", "fun"]
+print(" ".join(words))
+print(", ".join(str(n) for n in range(5)))</pre>
+  <pre class="o">Python is fun
+0, 1, 2, 3, 4</pre></div>
+
+  <h3>Be lazy with your imports</h3>
+  <ul>
+    <li><code>from math import sqrt</code> imports just what you need and lets you call <code>sqrt(x)</code> directly.</li>
+    <li><code>from math import *</code> dumps every name from <code>math</code> into your program. It's on the slide, but PEP 8 recommends avoiding it: you can't tell where a name came from, and it can silently overwrite your own variables.</li>
+    <li>"Lazy" also means importing a heavy library only inside the function that needs it, so the program starts faster.</li>
+  </ul>
+
+  <h3>Avoid repeated dot operations</h3>
+  <p>Every <code>.</code> is a lookup at run time. Inside a hot loop, <code>math.sqrt(x)</code> looks up <code>math</code>, then <code>sqrt</code> on it, every iteration. Saving it in a local name first (<code>sqrt = math.sqrt</code>, or <code>from math import sqrt</code>) skips that work — race it in the lab ("dot lookups").</p>
+
+  <h3>Use libraries and built-in functions — don't reinvent the wheel</h3>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>“If you need a neural network, don't write one from scratch.” One of Python's biggest strengths is its huge community and number of libraries. Before building something, search for it — it has most likely been implemented already, and you only need to import it.</p></div>
+  <div class="cell" data-label="built-ins are written in C"><pre class="py">numbers = [4, 8, 15, 16, 23, 42]
+
+total = 0
+for n in numbers:          # reinventing the wheel
+    total += n
+print(total)
+
+print(sum(numbers), max(numbers), sorted(numbers, reverse=True))</pre>
+  <pre class="o">108
+108 42 [42, 23, 16, 15, 8, 4]</pre></div>
+</section>
+
+<section class="section" id="s-map">
+  <div class="sec-head"><span class="sec-num">1.4</span><h2>The advanced tools this course covers</h2></div>
+  <div class="grid">
+    <div class="obj"><div class="ty">lecture <b>2</b></div><div class="bd"><h4>Object-oriented programming</h4><p>Bundle data and behaviour into classes and objects. Metaclasses are classes that create classes.</p></div></div>
+    <div class="obj"><div class="ty">lecture <b>3</b></div><div class="bd"><h4>Decorators</h4><p>Change what a function or class does without editing it.</p></div></div>
+    <div class="obj"><div class="ty">lecture <b>3</b></div><div class="bd"><h4>Generators</h4><p>Loop over huge data sets one item at a time without loading everything into memory.</p></div></div>
+    <div class="obj"><div class="ty">upcoming</div><div class="bd"><h4>Debugging, error handling, profiling</h4><p>Find bugs, handle errors gracefully, and find out which part of the code is slow.</p></div></div>
+  </div>
+  <p>A taste of <strong>profiling</strong>: <code>cProfile</code> runs your code and reports how much time each function took — so you optimise the part that matters instead of guessing.</p>
+  <div class="cell" data-label="profiling: where does the time go?"><pre class="py">import cProfile, pstats
+
+def slow_part():
+    return sum(i * i for i in range(300_000))
+
+def fast_part():
+    return sum(range(1000))
+
+def program():
+    slow_part()
+    fast_part()
+
+profiler = cProfile.Profile()
+profiler.enable()
+program()
+profiler.disable()
+pstats.Stats(profiler).sort_stats("cumulative").print_stats(5)</pre>
+  <pre class="o">         300007 function calls in 0.563 seconds
+
+   Ordered by: cumulative time
+   List reduced from 6 to 5 due to restriction &lt;5&gt;
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.563    0.563 &lt;cell&gt;:9(program)
+        2    0.305    0.152    0.563    0.282 {built-in method builtins.sum}
+        1    0.000    0.000    0.563    0.563 &lt;cell&gt;:3(slow_part)
+   300001    0.258    0.000    0.258    0.000 &lt;cell&gt;:4(&lt;genexpr&gt;)
+        1    0.000    0.000    0.000    0.000 &lt;cell&gt;:6(fast_part)
+&lt;pstats.Stats object at 0xdec338&gt;</pre></div>
+</section>
+
+<section class="section" id="s-libs">
+  <div class="sec-head"><span class="sec-num">1.5</span><h2>Libraries for data science</h2></div>
+  <div class="table-wrap"><table class="t">
+    <tr><th>Library</th><th>What it's for</th></tr>
+    <tr><td class="mono">numpy</td><td>fast arrays and maths; the foundation of everything below</td></tr>
+    <tr><td class="mono">pandas</td><td>tables (DataFrames): load, clean, filter, group and summarise data</td></tr>
+    <tr><td class="mono">matplotlib</td><td>plotting: line, bar, scatter, histograms…</td></tr>
+    <tr><td class="mono">seaborn</td><td>statistical plots built on matplotlib, with nicer defaults</td></tr>
+    <tr><td class="mono">scipy</td><td>scientific computing: statistics, optimisation, integration</td></tr>
+    <tr><td class="mono">scikit-learn</td><td>classic machine learning: regression, classification, clustering</td></tr>
+    <tr><td class="mono">keras</td><td>deep learning (neural networks)</td></tr>
+  </table></div>
+  <p>Why NumPy is fast: a NumPy array stores raw numbers side by side in memory and runs whole-array operations in C — <strong>vectorisation</strong> — instead of looping over Python objects one by one.</p>
+  <div class="cell" data-label="pure Python loop vs one NumPy operation (first run downloads numpy)"><pre class="py">import timeit
+import numpy as np
+
+values = list(range(100_000))
+array = np.arange(100_000)
+
+t_loop = timeit.timeit(lambda: [v * 2 for v in values], number=20)
+t_numpy = timeit.timeit(lambda: array * 2, number=20)
+print(f"Python list: {t_loop:.4f} s")
+print(f"NumPy array: {t_numpy:.4f} s  ->  about {t_loop / t_numpy:.0f}x faster")</pre>
+  <pre class="o">Python list: 0.4982 s
+NumPy array: 0.0087 s  -&gt;  about 57x faster</pre></div>
+  <p>The lecture also lists two more ways to go faster when a single core isn't enough: <strong>multiprocessing / parallel programming</strong> (several processes at once, side-stepping the GIL) and <strong>GPU acceleration</strong> (thousands of small cores, used by deep-learning libraries).</p>
+</section>
+
+<section class="section" id="s-big">
+  <div class="sec-head"><span class="sec-num">1.6</span><h2>Big data: Hadoop and Spark</h2></div>
+  <p>When data is too big for one computer, it is split across many. Python talks to the two classic systems:</p>
+  <div class="grid">
+    <div class="obj"><div class="ty">Apache <b>Hadoop</b></div><div class="bd"><p>Stores huge files across many machines (<strong>HDFS</strong>) and processes them with <strong>MapReduce</strong>: each machine works on its own piece (map), then the partial results are combined (reduce). Reads and writes to disk between steps.</p></div></div>
+    <div class="obj"><div class="ty">Apache <b>Spark</b></div><div class="bd"><p>The same idea, but keeps data <strong>in memory</strong> between steps, so it is much faster, especially for repeated computations like machine learning. Python uses it through <strong>PySpark</strong>.</p></div></div>
+  </div>
+  <div class="lab" id="lab-mr">
+    <div class="lab-head"><span class="badge">see it</span><span class="title">MapReduce word count, step by step</span></div>
+    <div class="lab-body">
+      <p class="hint">Each line is a "chunk" on a different machine. Edit the text, then step through map → shuffle → reduce.</p>
+      <textarea class="txt" id="mr-in" spellcheck="false" style="width:100%;min-height:90px">data science with python
+python for big data
+spark makes big data fast</textarea>
+      <div class="row"><span class="seg"><button class="btn on" data-s="0">1 · map</button><button class="btn" data-s="1">2 · shuffle</button><button class="btn" data-s="2">3 · reduce</button></span></div>
+      <div id="mr-out" class="grid" style="margin-top:.4rem"></div>
+      <div class="explain" id="mr-exp"></div>
+    </div>
+  </div>
+  <div class="cell" data-label="the same word count in plain Python"><pre class="py">text = """data science with python
+python for big data
+spark makes big data fast"""
+
+counts = {}
+for word in text.split():
+    counts[word] = counts.get(word, 0) + 1
+
+sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:4]</pre>
+  <pre class="o" data-out="expr">[('data', 3), ('python', 2), ('big', 2), ('science', 1)]</pre></div>
+</section>
+
+<section class="section" id="s-logistics">
+  <div class="sec-head"><span class="sec-num">1.7</span><h2>Course logistics</h2></div>
+  <div class="table-wrap"><table class="t">
+    <tr><th>Component</th><th>Weight</th></tr>
+    <tr><td>Assignments</td><td class="mono">10%</td></tr>
+    <tr><td>Project</td><td class="mono">30%</td></tr>
+    <tr><td>Final exam</td><td class="mono">60%</td></tr>
+  </table></div>
+  <ul>
+    <li><strong>Assignments (10%)</strong> — the deadline is strict. The lecturer was clear that work submitted after the deadline, even by half a minute, won't be accepted.</li>
+    <li><strong>Project (30%)</strong> — at the end of the semester, in teams of 2–3 students (no more than 3). Apply what the course covers with Python libraries: machine learning, deep learning or data analysis. There's a discussion/presentation of each project.</li>
+    <li><strong>Final exam (60%)</strong>.</li>
+  </ul>
+  <p>References are given inside each lecture.</p>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>Later in the course, if time allows: Python on the GPU (to speed up execution), and the Apache Hadoop and Apache Spark tools from 1.6.</p></div>
+</section>
+
+<section class="section" id="s-quiz">
+  <div class="sec-head"><span class="sec-num">✓</span><h2>Check yourself</h2></div>
+  <div class="quiz" data-id="l1">
+    <div class="quiz-top"><h3>Lecture 1 quiz</h3><span class="quiz-score"></span></div>
+    <div class="q" data-a="2"><div class="q-text">What happens to your <code>.py</code> file before the Python Virtual Machine runs it?</div>
+      <div class="q-opts"><button class="q-opt">It is compiled straight to machine code</button><button class="q-opt">Nothing — the PVM reads the text line by line</button><button class="q-opt">It is compiled into bytecode, which the PVM then interprets</button><button class="q-opt">It is converted to C</button></div>
+      <div class="q-fb">Source → bytecode (<code>dis</code> shows it) → interpreted by the PVM. That interpretation step is a big part of why Python is slower than C.</div></div>
+    <div class="q" data-a="0"><div class="q-text">Why does dynamic typing slow Python down?</div>
+      <div class="q-opts"><button class="q-opt">Types are checked while the program runs, every time an operation happens</button><button class="q-opt">Python has no types</button><button class="q-opt">Variables must be declared twice</button><button class="q-opt">It forces everything to be a string</button></div>
+      <div class="q-fb">A name can point to any type, so before <code>a + b</code> Python must look at what <code>a</code> and <code>b</code> currently are.</div></div>
+    <div class="q" data-a="3"><div class="q-text">What does the GIL do?</div>
+      <div class="q-opts"><button class="q-opt">Deletes unused variables</button><button class="q-opt">Compiles Python to bytecode</button><button class="q-opt">Locks files while they're open</button><button class="q-opt">Lets only one thread execute Python bytecode at a time</button></div>
+      <div class="q-fb">Global Interpreter Lock: one thread at a time. For CPU-heavy work use multiprocessing or C-based libraries like NumPy.</div></div>
+    <div class="q" data-a="1"><div class="q-text">Which is the best way to build a long string from many pieces?</div>
+      <div class="q-opts"><button class="q-opt"><code>s = s + piece</code> in a loop</button><button class="q-opt"><code>"".join(pieces)</code></button><button class="q-opt"><code>from string import *</code></button><button class="q-opt">a global variable</button></div>
+      <div class="q-fb">Strings are immutable, so <code>+</code> in a loop copies the growing string each time; <code>join</code> builds it once.</div></div>
+    <div class="q" data-a="2"><div class="q-text">You need to check, thousands of times, whether an ID is in a collection of 100,000 IDs. Which structure?</div>
+      <div class="q-opts"><button class="q-opt">list</button><button class="q-opt">tuple</button><button class="q-opt">set</button><button class="q-opt">string</button></div>
+      <div class="q-fb">Membership in a set (or dict keys) is near-instant whatever its size; a list has to be scanned from the start.</div></div>
+    <div class="q" data-a="0"><div class="q-text">What's the naming convention for a class?</div>
+      <div class="q-opts"><button class="q-opt"><code>CamelCase</code>, like <code>BankAccount</code></button><button class="q-opt"><code>snake_case</code>, like <code>bank_account</code></button><button class="q-opt">ALL_CAPS</button><button class="q-opt">anything, Python doesn't care</button></div>
+      <div class="q-fb">PEP 8: CamelCase for classes, snake_case for variables and functions. Python doesn't enforce it, but everyone reads code faster when it's followed.</div></div>
+    <div class="q" data-a="1"><div class="q-text">How does Spark differ from Hadoop MapReduce?</div>
+      <div class="q-opts"><button class="q-opt">Spark only works on one computer</button><button class="q-opt">Spark keeps data in memory between steps, so it's much faster</button><button class="q-opt">Spark can't be used from Python</button><button class="q-opt">There is no difference</button></div>
+      <div class="q-fb">Hadoop writes intermediate results to disk; Spark keeps them in RAM. PySpark is Spark's Python interface.</div></div>
+    <div class="row"><button class="btn quiz-reset">↺ try again</button></div>
+  </div>
+</section>
+
+<section class="section" id="s-sum">
+  <div class="sec-head"><span class="sec-num">★</span><h2>Summary</h2></div>
+  <div class="summary"><ul>
+    <li>Python trades CPU time for engineer time: quick to write and change, slower to run.</li>
+    <li>Three reasons: <strong>interpreted</strong> (source → bytecode → PVM), <strong>dynamically typed</strong> (types checked at run time), <strong>single-threaded</strong> for Python code (the GIL).</li>
+    <li>Speed is the programmer's job: latest Python, readable code, locals over globals, the right data structure, comprehensions, <code>join</code>, fewer dot lookups, built-ins and libraries.</li>
+    <li>Measure before optimising: <code>timeit</code> for small snippets, <code>cProfile</code> for whole programs.</li>
+    <li>NumPy and friends are fast because the heavy work runs in C on whole arrays.</li>
+    <li>Too big for one machine → Hadoop (MapReduce on disk) or Spark (in memory, via PySpark).</li>
+  </ul></div>
+</section>
+
+<div id="lec-nav"></div>
+</main>
+<aside class="toc"></aside>
+</div>
+
+<script>
+document.addEventListener('ds:ready', () => {
+  const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
+  const K = window.DS_KERNEL, esc = window.DS_ESC, hl = window.DS_HL;
+
+  /* ---------- bytecode viewer ---------- */
+  (function () {
+    const EX = {
+      while: 'def loop_one():\n    while 1:\n        break\n\ndef loop_true():\n    while True:\n        break',
+      comp: 'def with_loop():\n    out = []\n    for n in range(5):\n        out.append(n * n)\n    return out\n\ndef with_comprehension():\n    return [n * n for n in range(5)]'
+    };
+    $$('#lab-dis [data-ex]').forEach(b => b.addEventListener('click', () => { $('#dis-src').value = EX[b.dataset.ex]; run(); }));
+    async function run() {
+      const out = $('#dis-out'); out.textContent = 'running…';
+      const py = `import dis, types\n_d = {}\nexec(${JSON.stringify($('#dis-src').value)}, _d)\nfor _k, _v in _d.items():\n    if isinstance(_v, types.FunctionType):\n        print(f"--- {_k} ---")\n        dis.dis(_v)\n        print()`;
+      try { const r = await K.run(py); out.textContent = r.err ? r.err : r.out; } catch (e) { out.textContent = 'Could not start Python: ' + e.message; }
+    }
+    $('#dis-run').addEventListener('click', run);
+  })();
+
+  /* ---------- names → objects ---------- */
+  (function () {
+    const steps = [
+      { code: 'a = 0', names: { a: 0 }, objs: [{ v: '0', t: 'int' }], exp: 'Python creates an <b>int</b> object 0 and sticks the name <b>a</b> on it.' },
+      { code: 'b = a', names: { a: 0, b: 0 }, objs: [{ v: '0', t: 'int' }], exp: '<b>b = a</b> does not copy anything: <b>b</b> becomes a second name for the <i>same</i> object.' },
+      { code: 'a = "zero"', names: { a: 1, b: 0 }, objs: [{ v: '0', t: 'int' }, { v: '"zero"', t: 'str' }], exp: 'Now a <b>str</b> object is created and <b>a</b> moves to it. The name has no type — only objects do. <b>b</b> still points at 0.' },
+      { code: 'a = [0, 0]', names: { a: 2, b: 0 }, objs: [{ v: '0', t: 'int' }, { v: '"zero"', t: 'str' }, { v: '[0, 0]', t: 'list' }], exp: '<b>a</b> moves again, to a <b>list</b>. Nothing points at "zero" any more, so Python\'s garbage collector will free it. This is why Python has to check types every time it runs an operation.' }
+    ];
+    let k = 0;
+    function draw() {
+      const s = steps[k], svg = $('#nm-svg');
+      $('#nm-step').textContent = `line ${k + 1} of ${steps.length}:  ${s.code}`;
+      let h = '<text x="20" y="22" class="muted">names</text><text x="300" y="22" class="muted">objects (each knows its own type)</text>';
+      const ny = { a: 70, b: 150 };
+      Object.keys(s.names).forEach(n => { h += `<rect class="name" x="20" y="${ny[n] - 20}" width="70" height="36" rx="6"/><text x="55" y="${ny[n] + 3}" text-anchor="middle" style="font-weight:700">${n}</text>`; });
+      s.objs.forEach((o, i) => {
+        const y = 45 + i * 62, used = Object.values(s.names).includes(i);
+        h += `<rect class="boxr" x="300" y="${y}" width="230" height="44" rx="8" style="${used ? '' : 'opacity:.4;stroke-dasharray:4 3'}"/><text x="314" y="${y + 18}" class="muted">type: ${o.t}</text><text x="314" y="${y + 35}" style="font-weight:700">${esc(o.v)}</text>`;
+      });
+      Object.entries(s.names).forEach(([n, i]) => { const y1 = ny[n] - 2, y2 = 67 + i * 62; h += `<path class="arrow ${steps[k].code.startsWith(n) ? 'hot' : ''}" d="M90 ${y1} C 190 ${y1}, 200 ${y2}, 296 ${y2}" marker-end="url(#ah)"/>`; });
+      svg.innerHTML = '<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' + h;
+      $('#nm-exp').innerHTML = s.exp;
+      $('#nm-prev').disabled = k === 0; $('#nm-next').disabled = k === steps.length - 1;
+    }
+    $('#nm-prev').addEventListener('click', () => { k--; draw(); });
+    $('#nm-next').addEventListener('click', () => { k++; draw(); });
+    draw();
+  })();
+
+  /* ---------- GIL timeline ---------- */
+  (function () {
+    let mode = 'cpu', timer = null;
+    const TXT = {
+      cpu: '<b>CPU-bound</b> (pure-Python calculations): the lock passes from thread to thread, so at any moment only one is working. Three threads take about as long as doing the work one after another — no speed-up.',
+      io: '<b>I/O-bound</b> (waiting for the network or disk): a waiting thread releases the GIL (grey = waiting), so another thread can run meanwhile. The waits overlap and the whole job finishes much sooner — this is where threads <i>do</i> help in Python.'
+    };
+    function plan() {
+      const seq = [];
+      if (mode === 'cpu') { for (let t = 0; t < 12; t++) seq.push({ th: t % 3, start: t, len: 1, kind: 'run' }); }
+      else { [0, 1, 2].forEach(th => { seq.push({ th, start: th * 0.5, len: 0.5, kind: 'run' }); seq.push({ th, start: th * 0.5 + 0.5, len: 3, kind: 'wait' }); seq.push({ th, start: th * 0.5 + 3.5, len: 0.5, kind: 'run' }); }); }
+      return seq;
+    }
+    function draw(tNow) {
+      const seq = plan(), total = mode === 'cpu' ? 12 : 4.6, X = t => 110 + t / total * 500;
+      let h = '';
+      [0, 1, 2].forEach(th => { h += `<text x="14" y="${48 + th * 42}">thread ${th + 1}</text><line x1="110" x2="610" y1="${44 + th * 42}" y2="${44 + th * 42}" stroke="var(--line)"/>`; });
+      seq.forEach(s => {
+        if (s.start >= tNow) return;
+        const w = Math.min(s.len, tNow - s.start);
+        h += `<rect x="${X(s.start)}" y="${30 + s.th * 42}" width="${Math.max(1, X(s.start + w) - X(s.start))}" height="26" rx="4" style="fill:${s.kind === 'run' ? 'var(--py-blue)' : 'var(--faint)'};opacity:${s.kind === 'run' ? .85 : .45}"/>`;
+      });
+      const holder = seq.find(s => s.kind === 'run' && tNow >= s.start && tNow < s.start + s.len);
+      h += `<text x="110" y="172" class="muted">🔒 GIL held by: ${holder ? 'thread ' + (holder.th + 1) : (tNow >= total ? 'done' : 'nobody (all waiting)')}</text><text x="610" y="172" text-anchor="end" class="muted">time →</text>`;
+      $('#gil-svg').innerHTML = h;
+    }
+    function play() {
+      clearInterval(timer); let t = 0; const total = mode === 'cpu' ? 12 : 4.6;
+      timer = setInterval(() => { t += total / 120; draw(t); if (t >= total) clearInterval(timer); }, 30);
+    }
+    $$('#lab-gil [data-g]').forEach(b => b.addEventListener('click', () => { mode = b.dataset.g; $$('#lab-gil [data-g]').forEach(x => x.classList.toggle('on', x === b)); $('#gil-exp').innerHTML = TXT[mode]; draw(99); }));
+    $('#gil-play').addEventListener('click', play);
+    $('#gil-exp').innerHTML = TXT.cpu; draw(99);
+  })();
+
+  /* ---------- Speed Lab ---------- */
+  (function () {
+    const RACES = {
+      comp: { name: 'loop vs comprehension', a: ['for + append', 'def run():\n    out = []\n    for i in range(10000):\n        out.append(i * i)\n    return out'], b: ['list comprehension', 'def run():\n    return [i * i for i in range(10000)]'], n: 100,
+        exp: 'The comprehension avoids looking up <b>out.append</b> and calling it 10,000 times; the loop machinery runs in C.' },
+      join: { name: 'string + vs join', a: ['s = s + piece', 'def run():\n    s = ""\n    for i in range(5000):\n        s = s + "word "\n    return s'], b: ['"".join(...)', 'def run():\n    return "".join("word " for i in range(5000))'], n: 100,
+        exp: 'Each <b>+</b> creates a new string and copies everything so far; <b>join</b> computes the final size once and copies each piece once.' },
+      global: { name: 'global vs local', a: ['global counter', 'counter = 0\ndef run():\n    global counter\n    for i in range(10000):\n        counter = counter + i'], b: ['local counter', 'def run():\n    counter = 0\n    for i in range(10000):\n        counter = counter + i\n    return counter'], n: 100,
+        exp: 'A global name is found by a dictionary lookup each time; a local one by a quick array index (LOAD_FAST in the bytecode).' },
+      member: { name: 'list vs set membership', a: ['x in list', 'data = list(range(5000))\ndef run():\n    return sum(1 for x in range(0, 10000, 7) if x in data)'], b: ['x in set', 'data = set(range(5000))\ndef run():\n    return sum(1 for x in range(0, 10000, 7) if x in data)'], n: 10,
+        exp: 'A list is scanned element by element; a set jumps straight to the right place using a hash. The bigger the collection, the bigger the gap.' },
+      dot: { name: 'dot lookups', a: ['math.sqrt in the loop', 'import math\ndef run():\n    return [math.sqrt(i) for i in range(10000)]'], b: ['sqrt saved locally', 'from math import sqrt\ndef run():\n    s = sqrt\n    return [s(i) for i in range(10000)]'], n: 100,
+        exp: 'Every <b>math.sqrt</b> means "find math, then find sqrt inside it". Saving it once removes that work from the loop. The gain is real but small — do it only in hot loops.' },
+      builtin: { name: 'manual sum vs sum()', a: ['for loop total', 'def run():\n    total = 0\n    for i in range(10000):\n        total += i\n    return total'], b: ['built-in sum()', 'def run():\n    return sum(range(10000))'], n: 100,
+        exp: '<b>sum()</b> is written in C, so the whole loop happens outside the interpreter. Don\'t reinvent the wheel.' },
+      forwhile: { name: 'for vs while', a: ['while + counter', 'def run():\n    i = 0\n    total = 0\n    while i < 10000:\n        total += i\n        i += 1\n    return total'], b: ['for + range', 'def run():\n    total = 0\n    for i in range(10000):\n        total += i\n    return total'], n: 100,
+        exp: 'The slide suggests <i>while instead of for</i>, but in modern Python the <b>for</b> loop usually wins: <b>range</b> does the counting in C, while the <b>while</b> loop runs an extra comparison and addition in Python every iteration. Always measure tips yourself!' }
+    };
+    let cur = 'comp';
+    $('#sp-btns').innerHTML = Object.entries(RACES).map(([k, r]) => `<button class="btn ${k === cur ? 'on' : ''}" data-r="${k}">${r.name}</button>`).join('');
+    $$('#sp-btns .btn').forEach(b => b.addEventListener('click', () => { cur = b.dataset.r; $$('#sp-btns .btn').forEach(x => x.classList.toggle('on', x === b)); show(); }));
+    function show() {
+      const r = RACES[cur];
+      $('#sp-code').innerHTML = hl(`# A: ${r.a[0]}\n${r.a[1]}\n\n# B: ${r.b[0]}\n${r.b[1]}`);
+      $('#sp-bars').innerHTML = ''; $('#sp-exp').innerHTML = r.exp; $('#sp-status').textContent = '';
+    }
+    $('#sp-run').addEventListener('click', async () => {
+      const r = RACES[cur]; $('#sp-status').textContent = 'racing… (first run loads Python)'; $('#sp-run').disabled = true;
+      const py = `import timeit\n_t = []\nfor _src in (${JSON.stringify(r.a[1])}, ${JSON.stringify(r.b[1])}):\n    _g = {}\n    exec(_src, _g)\n    _t.append(min(timeit.repeat(_g["run"], number=${r.n}, repeat=3)))\nprint(_t[0], _t[1])`;
+      try {
+        const res = await K.run(py);
+        if (res.err) throw new Error(res.err);
+        const [ta, tb] = res.out.trim().split(/\s+/).map(Number), mx = Math.max(ta, tb);
+        const row = (lab, t, cls) => `<div class="barrow"><span class="bl">${esc(lab)}</span><div class="bt ${cls}" style="width:${(t / mx * 100).toFixed(1)}%"></div><span class="bv">${(t * 1000 / r.n).toFixed(3)} ms</span></div>`;
+        $('#sp-bars').innerHTML = row('A: ' + r.a[0], ta, ta > tb ? 'slow' : 'fast') + row('B: ' + r.b[0], tb, tb > ta ? 'slow' : 'fast');
+        const f = ta > tb ? ta / tb : tb / ta;
+        $('#sp-status').textContent = `${ta > tb ? 'B' : 'A'} was ${f.toFixed(1)}× faster (time per call, best of 3 × ${r.n} calls)`;
+      } catch (e) { $('#sp-status').textContent = 'Error: ' + e.message; }
+      $('#sp-run').disabled = false;
+    });
+    show();
+  })();
+
+  /* ---------- MapReduce ---------- */
+  (function () {
+    let stage = 0;
+    function draw() {
+      const lines = $('#mr-in').value.split('\n').map(l => l.trim()).filter(Boolean);
+      const mapped = lines.map(l => l.toLowerCase().split(/\s+/).filter(Boolean).map(w => [w, 1]));
+      const groups = {}; mapped.flat().forEach(([w]) => { (groups[w] = groups[w] || []).push(1); });
+      let h = '';
+      if (stage === 0) h = mapped.map((m, i) => `<div class="obj"><div class="ty">machine <b>${i + 1}</b> · map</div><div class="bd" style="font-family:var(--f-mono);font-size:.8rem">${m.map(([w]) => `(${esc(w)}, 1)`).join('<br>')}</div></div>`).join('');
+      if (stage === 1) h = Object.entries(groups).map(([w, ones]) => `<div class="obj"><div class="ty">key <b>${esc(w)}</b></div><div class="bd" style="font-family:var(--f-mono);font-size:.8rem">[${ones.join(', ')}]</div></div>`).join('');
+      if (stage === 2) h = Object.entries(groups).sort((a, b) => b[1].length - a[1].length).map(([w, ones]) => `<div class="obj"><div class="ty">reduce</div><div class="bd" style="font-family:var(--f-mono)"><b>${esc(w)}</b>: ${ones.length}</div></div>`).join('');
+      $('#mr-out').innerHTML = h;
+      $('#mr-exp').innerHTML = ['<b>Map:</b> every machine turns its own chunk into (word, 1) pairs — in parallel, without talking to the others.', '<b>Shuffle:</b> all pairs with the same word are sent to the same place, so each word\'s 1s end up together.', '<b>Reduce:</b> each group is added up. Hadoop writes to disk between these steps; Spark keeps everything in memory.'][stage];
+    }
+    $$('#lab-mr [data-s]').forEach(b => b.addEventListener('click', () => { stage = +b.dataset.s; $$('#lab-mr [data-s]').forEach(x => x.classList.toggle('on', x === b)); draw(); }));
+    $('#mr-in').addEventListener('input', draw); draw();
+  })();
+});
+</script>
+</body>
+</html>

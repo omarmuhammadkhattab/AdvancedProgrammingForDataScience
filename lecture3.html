@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L3 · Decorators, Metaclasses & Generators — DS588</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/site.js"></script>
+</head>
+<body data-page="l3">
+
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="eyebrow">lecture 3 <b>·</b> metaprogramming</div>
+      <h1>Code that <span class="u">writes and wraps</span> other code.</h1>
+      <p class="lead">Functions are objects, so you can pass them around, return them and wrap them: that's a <strong>decorator</strong>. Classes are objects too, made by <code>type</code>, so you can build them on the fly and control how they're made: that's a <strong>metaclass</strong>. And <strong>generators</strong> hand out values one at a time instead of all at once. All the lecture notebook's cells, in order, runnable here.</p>
+      <div class="tags"><span>first-class functions</span><span>closures</span><span>@decorator</span><span>__str__ / __repr__</span><span>__eq__</span><span>__new__</span><span>type()</span><span>metaclass</span><span>yield</span><span>next()</span></div>
+      <div class="meta"><span><b>Sources:</b> DS588 Lecture 3.pdf · Lecture 3.ipynb</span><span><b>Video:</b> Lecture 3</span></div>
+    </div>
+    <div class="repl" aria-hidden="true"><span class="p">&gt;&gt;&gt;</span> @star<br><span class="p">...</span> def printer(msg): print(msg)<br><span class="p">&gt;&gt;&gt;</span> printer("DS588")<br><span class="o">********************</span><br><span class="o">DS588</span><br><span class="o">********************</span><br><span class="p">&gt;&gt;&gt;</span> next(g)<br><span class="o">(2, 3, 5)</span><br><span class="p">&gt;&gt;&gt;</span> <span class="cursor"></span></div>
+  </div>
+</header>
+
+<div class="page">
+<main class="content">
+
+<section class="section" id="s-meta">
+  <div class="sec-head"><span class="sec-num">3.1</span><h2>Metaprogramming, and "everything is an object"</h2></div>
+  <p><strong>Metaprogramming</strong> is writing programs that create or change other programs. In Python it works because <em>everything</em> — numbers, functions, classes — is an object that has a type and can be passed around. The notebook starts by asking for the type of everything, then the type of that type:</p>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>The lecturer explained “meta” through <strong>metadata</strong>: a table's rows and columns are data, and the description of that data (what each column is, its type) is data <em>about</em> data. Likewise, ordinary programming writes a program that does a task, while <strong>metaprogramming</strong> writes a program that can generate another program or change how one works. Decorators and metaclasses are Python's two tools for this.</p></div>
+  <div class="cell" data-label="Lecture 3.ipynb — an int"><pre class="py">x = 10
+type(x)</pre>
+  <pre class="o" data-out="expr">int</pre></div>
+  <div class="cell" data-label="the type of int"><pre class="py">type(type(x))</pre>
+  <pre class="o" data-out="expr">type</pre></div>
+  <div class="cell" data-label="a function"><pre class="py">def fun():
+    return 10</pre></div>
+  <div class="cell"><pre class="py">type(fun)</pre>
+  <pre class="o" data-out="expr">function</pre></div>
+  <div class="cell"><pre class="py">type(type(fun))</pre>
+  <pre class="o" data-out="expr">type</pre></div>
+  <div class="cell" data-label="a class"><pre class="py">class Person:
+    def __init__(self, name):
+        self.name = name</pre></div>
+  <div class="cell"><pre class="py">type(Person)</pre>
+  <pre class="o" data-out="expr">type</pre></div>
+  <div class="cell"><pre class="py">type(type)</pre>
+  <pre class="o" data-out="expr">type</pre></div>
+  <div class="note key"><div class="lbl">The pattern</div><p>Whatever you start from, two steps of <code>type()</code> always land on <code>type</code>. <code>10</code> is made by <code>int</code>, a function is made by <code>function</code>, and <code>int</code>, <code>function</code> and <code>Person</code> are all made by <code>type</code>. Keep this picture: it's the whole idea behind metaclasses in 3.5.</p></div>
+</section>
+
+<section class="section" id="s-funcs">
+  <div class="sec-head"><span class="sec-num">3.2</span><h2>Functions are objects: the three building blocks of decorators</h2></div>
+  <p>Before decorators make sense you need three facts about functions (all on the slide):</p>
+  <h3>① A function can be defined inside another function (nested) …</h3>
+  <h3>② … and returned from it</h3>
+  <div class="cell" data-label="outer returns the inner function"><pre class="py">def outer(x):
+    print(x)
+    def inner(y):
+        return x + y
+    return inner</pre></div>
+  <div class="cell" data-label="calling outer runs its print and hands back inner"><pre class="py">add_five = outer(5)
+</pre>
+  <pre class="o">5</pre></div>
+  <div class="cell" data-label="add_five IS a function"><pre class="py">type(add_five)</pre>
+  <pre class="o" data-out="expr">function</pre></div>
+  <div class="cell"><pre class="py">add_five = outer(5)
+result = add_five(4)
+print(result)
+print(type(result))</pre>
+  <pre class="o">5
+9
+&lt;class 'int'&gt;</pre></div>
+  <p><code>outer</code> has finished running, yet <code>add_five</code> still remembers <code>x = 5</code>. A function that remembers the variables of the function it was created in is called a <strong>closure</strong>.</p>
+  <div class="cell" data-label="extra — the remembered value is stored on the function"><pre class="py">add_ten = outer(10)
+print(add_five(1), add_ten(1))                   # same code, different memory
+print(add_five.__closure__[0].cell_contents)     # where x = 5 is kept</pre>
+  <pre class="o">10
+6 11
+5</pre></div>
+  <h3>③ A function can be passed as an argument</h3>
+  <div class="cell" data-label="pass the function itself, without ()"><pre class="py">def add(x, y):
+    return x + y
+def subtract(x, y):
+    return x - y
+
+def calculate(fun, x, y):
+    return fun(x, y)</pre></div>
+  <div class="cell"><pre class="py">result = calculate(subtract, 5, 8)
+print(result)</pre>
+  <pre class="o">-3</pre></div>
+  <div class="cell" data-label="one more closure"><pre class="py">def greeting(name):
+    def hello():
+        return "Hello " + name
+    return hello</pre></div>
+  <div class="cell"><pre class="py">greet = greeting("Ahmed")
+print(greet())</pre>
+  <pre class="o">Hello Ahmed</pre></div>
+  <div class="note trap"><div class="lbl">With or without brackets</div><p><code>subtract</code> is the function object; <code>subtract(5, 8)</code> <em>calls</em> it and gives <code>-3</code>. When you pass a function to another function, leave the brackets off.</p></div>
+</section>
+
+<section class="section" id="s-deco">
+  <div class="sec-head"><span class="sec-num">3.3</span><h2>Decorators</h2></div>
+  <p>A <strong>decorator</strong> is a function that takes a function and returns a new one that <strong>changes its behaviour without modifying its code</strong>. It's built from exactly the three facts above: the decorator receives a function (③), defines a wrapper inside (①) and returns it (②).</p>
+  <div class="cell" data-label="a decorator, applied by hand"><pre class="py">def make_pretty(fun):
+    def inner():
+        print("I got decorated")
+        fun()
+    return inner
+
+
+def ordinary():
+    print("I am ordinary function")</pre></div>
+  <div class="cell"><pre class="py">decorated_fun = make_pretty(ordinary)</pre></div>
+  <div class="cell"><pre class="py">decorated_fun()</pre>
+  <pre class="o">I got decorated
+I am ordinary function</pre></div>
+  <p>Writing <code>ordinary = make_pretty(ordinary)</code> every time is clumsy, so Python gives a shortcut: put <code>@make_pretty</code> on the line above the definition.</p>
+  <div class="cell" data-label="the @ syntax — same thing, shorter"><pre class="py">def make_pretty(fun):
+    def inner():
+        print("I got decorated")
+        fun()
+    return inner
+
+@make_pretty
+def ordinary():
+    print("I am ordinary function")</pre></div>
+  <div class="cell"><pre class="py">ordinary()</pre>
+  <pre class="o">I got decorated
+I am ordinary function</pre></div>
+  <div class="grid">
+    <div class="obj"><div class="ty">you write</div><div class="bd"><pre class="hl-py">@make_pretty
+def ordinary():
+    ...</pre></div></div>
+    <div class="obj"><div class="ty">Python does</div><div class="bd"><pre class="hl-py">def ordinary():
+    ...
+ordinary = make_pretty(ordinary)</pre></div></div>
+  </div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>Why use a decorator? The lecturer's answer: when you want a function to do a bit more — check its data before it runs, or format its output — <em>without</em> touching its implementation. You write the extra behaviour once as a decorator and put <code>@name</code> on any function that needs it, instead of editing every function.</p></div>
+  <h3>Decorating functions that take arguments</h3>
+  <p>The wrapper must accept the same arguments as the function it wraps. This one checks the arguments before the division happens:</p>
+  <div class="cell" data-label="a guard decorator"><pre class="py">def smart_divide(fun):
+    def inner(a, b):
+        if b == 0:
+            print("Zero Division Error")
+            return
+        else:
+            return fun(a, b)
+    return inner
+
+@smart_divide
+def divide(a, b):
+    print(a / b)</pre></div>
+  <div class="cell"><pre class="py">divide(6, 3)</pre>
+  <pre class="o">2.0</pre></div>
+  <div class="cell" data-label="no crash: the decorator caught it first"><pre class="py">divide(4, 0)</pre>
+  <pre class="o">Zero Division Error</pre></div>
+  <div class="cell" data-label="extra — a general decorator for ANY arguments: *args, **kwargs"><pre class="py">import time, functools
+
+def timer(fun):
+    @functools.wraps(fun)              # keep the original name and docstring
+    def inner(*args, **kwargs):        # accept whatever the function accepts
+        start = time.perf_counter()
+        result = fun(*args, **kwargs)
+        print(f"{fun.__name__} took {time.perf_counter() - start:.4f} s")
+        return result
+    return inner
+
+@timer
+def total(n):
+    return sum(range(n))
+
+print(total(1_000_000))
+print(total.__name__)</pre>
+  <pre class="o">total took 0.2956 s
+499999500000
+total</pre></div>
+  <h3>Chaining decorators</h3>
+  <div class="cell" data-label="one decorator"><pre class="py">def star(fun):
+    def inner(msg):
+        print("*" * 20)
+        fun(msg)
+        print("*" * 20)
+    return inner
+
+@star
+def printer(msg):
+    print(msg)</pre></div>
+  <div class="cell"><pre class="py">printer("This is DS588 Lecture 3")</pre>
+  <pre class="o">********************
+This is DS588 Lecture 3
+********************</pre></div>
+  <div class="cell" data-label="two decorators stacked"><pre class="py">def star(fun):
+    def inner(msg):
+        print("*" * 20)
+        fun(msg)
+        print("*" * 20)
+    return inner
+
+def percent(fun):
+    def inner(msg):
+        print("%" * 20)
+        fun(msg)
+        print("%" * 20)
+    return inner
+
+@star
+@percent
+def printer(msg):
+    print(msg)</pre></div>
+  <div class="cell"><pre class="py">printer("This is DS588 Lecture")</pre>
+  <pre class="o">********************
+%%%%%%%%%%%%%%%%%%%%
+This is DS588 Lecture
+%%%%%%%%%%%%%%%%%%%%
+********************</pre></div>
+  <div class="cell" data-label="swap the order"><pre class="py">@percent
+@star
+def printer(msg):
+    print(msg)</pre></div>
+  <div class="cell"><pre class="py">printer("This is DS588 Lecture")</pre>
+  <pre class="o">%%%%%%%%%%%%%%%%%%%%
+********************
+This is DS588 Lecture
+********************
+%%%%%%%%%%%%%%%%%%%%</pre></div>
+  <div class="note key"><div class="lbl">The order rule</div><p>Decorators are applied <strong>bottom-up</strong> (the one nearest the function wraps it first), so the <strong>top</strong> one ends up as the <strong>outermost</strong> layer and prints first and last. <code>@star @percent</code> means <code>printer = star(percent(printer))</code>.</p></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>How she traced <code>@star</code> over <code>@percent</code>: the call enters <code>star</code>'s inner function, which prints its 20 stars and then calls the next layer. <code>percent</code>'s inner prints its 20 % signs and calls the original printer. Then each layer finishes in reverse: the % line, then the star line. Swap the decorators and the % lines end up on the outside.</p></div>
+  <div class="lab" id="lab-onion">
+    <div class="lab-head"><span class="badge">try it</span><span class="title">Decorator stack builder — runs in real Python</span></div>
+    <div class="lab-body">
+      <div class="row small"><span class="muted">click to add a decorator on top:</span><button class="btn" data-d="star">@star</button><button class="btn" data-d="percent">@percent</button><button class="btn" data-d="dash">@dash</button><button class="btn" data-op="pop">remove top</button><button class="btn" data-op="clear">clear</button></div>
+      <div class="row small"><span class="muted">message</span><input class="txt" id="on-msg" value="DS588" style="width:180px"><button class="btn primary" id="on-run">run ▶</button></div>
+      <div class="grid">
+        <div><div class="small muted">your code</div><pre class="hl-py codeview" id="on-code" style="padding:.6rem .9rem;white-space:pre"></pre><div class="small muted" id="on-eq"></div></div>
+        <div><div class="small muted">the layers (outermost first)</div><div class="onion" id="on-layers"></div></div>
+      </div>
+      <pre class="codeview" id="on-out" style="padding:.6rem .9rem;white-space:pre">(press run)</pre>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="s-special">
+  <div class="sec-head"><span class="sec-num">3.4</span><h2>Special ("dunder") methods: <code>__str__</code>, <code>__repr__</code>, <code>__eq__</code></h2></div>
+  <p>Methods whose names start and end with double underscores are <strong>special methods</strong>: you don't call them yourself; Python calls them when you use <code>print()</code>, <code>repr()</code>, <code>==</code>, and so on. Defining them teaches your class how to behave with those operations.</p>
+  <div class="cell" data-label="without special methods"><pre class="py">class Person:
+    counter = 0
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+        Person.counter += 1</pre></div>
+  <div class="cell"><pre class="py">p1 = Person("Aml", 22)</pre></div>
+  <div class="cell" data-label="the default: class name + memory address"><pre class="py">print(p1)</pre>
+  <pre class="o">&lt;__main__.Person object at 0xf4a1f8&gt;</pre></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>Special (“dunder”) methods such as <code>__init__</code>, <code>__str__</code> and <code>__eq__</code> already exist on every class. Writing your own version <strong>overrides</strong> the default implementation. The motivation in class: <code>print(p1)</code> shows only where the object lives in memory, while she wanted output a person can actually read.</p></div>
+  <h3><code>__str__</code>: a readable version for humans</h3>
+  <div class="cell"><pre class="py">class Person:
+    counter = 0
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+        Person.counter += 1
+
+    def __str__(self):
+        return f'{self.name}, {self.age}'</pre></div>
+  <div class="cell"><pre class="py">p2 = Person("Ahmed", 22)</pre></div>
+  <div class="cell" data-label="print() now uses __str__"><pre class="py">print(p2)</pre>
+  <pre class="o">Ahmed, 22</pre></div>
+  <div class="cell" data-label="but repr() still shows the default"><pre class="py">print(repr(p2))</pre>
+  <pre class="o">&lt;__main__.Person object at 0xb5dca8&gt;</pre></div>
+  <h3><code>__repr__</code>: an unambiguous version for programmers</h3>
+  <div class="cell"><pre class="py">class Person:
+    counter = 0
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+        Person.counter += 1
+
+    def __str__(self):
+        return f'{self.name}, {self.age}'
+
+    def __repr__(self):
+        return f'Person({self.name}, {self.age})'</pre></div>
+  <div class="cell"><pre class="py">p3 = Person("Salma", 22)</pre></div>
+  <div class="cell"><pre class="py">print(p3)</pre>
+  <pre class="o">Salma, 22</pre></div>
+  <div class="cell"><pre class="py">print(repr(p3))</pre>
+  <pre class="o">Person(Salma, 22)</pre></div>
+  <div class="table-wrap"><table class="t">
+    <tr><th></th><th><code>__str__</code></th><th><code>__repr__</code></th></tr>
+    <tr><td>for</td><td>humans — readable</td><td>programmers — "machine-readable", ideally looks like the code that rebuilds the object</td></tr>
+    <tr><td>used by</td><td><code>print(obj)</code>, <code>str(obj)</code>, f-strings</td><td><code>repr(obj)</code>, the notebook's <code>Out[]</code>, objects inside a list</td></tr>
+    <tr><td>if missing</td><td>falls back to <code>__repr__</code></td><td>the default <code>&lt;__main__.Person object at 0x…&gt;</code></td></tr>
+  </table></div>
+  <div class="cell" data-label="extra — where each one shows up"><pre class="py">people = [p3, Person("Omar", 30)]
+print(people)            # a list shows its items with repr
+print(f"Hi {p3}")        # f-strings use str
+p3                       # the notebook's Out[] uses repr</pre>
+  <pre class="o">[Person(Salma, 22), Person(Omar, 30)]
+Hi Salma, 22
+Person(Salma, 22)</pre></div>
+  <h3><code>__eq__</code>: what does "equal" mean?</h3>
+  <div class="cell"><pre class="py">p4 = Person("Salma", 22)</pre></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>Without <code>__eq__</code>, <code>==</code> asks whether both names point to the <strong>same object in the same place in memory</strong>, not whether their values match. That's why two people with identical names and ages compare as <code>False</code> until you define what equality means.</p></div>
+  <div class="cell" data-label="same data, but False — why?"><pre class="py">p3 == p4</pre>
+  <pre class="o" data-out="expr">False</pre></div>
+  <p>By default <code>==</code> on objects asks "are these the <em>same object</em> in memory?" — and <code>p3</code> and <code>p4</code> are two separate objects. <code>__eq__</code> lets you decide what equal means for your class:</p>
+  <div class="cell"><pre class="py">class Person:
+    counter = 0
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+        Person.counter += 1
+
+    def __str__(self):
+        return f'{self.name}, {self.age}'
+
+    def __repr__(self):
+        return f'Person({self.name}, {self.age})'
+
+    def __eq__(self, other):
+        return self.age == other.age </pre></div>
+  <div class="cell"><pre class="py">p3 = Person("Salma", 22)</pre></div>
+  <div class="cell"><pre class="py">p4 = Person("Salma", 22)</pre></div>
+  <div class="cell"><pre class="py">p3 == p4</pre>
+  <pre class="o" data-out="expr">True</pre></div>
+  <div class="cell"><pre class="py">p5 = Person("Ahmed", 26)</pre></div>
+  <div class="cell"><pre class="py">p3 == p5</pre>
+  <pre class="o" data-out="expr">False</pre></div>
+  <div class="cell"><pre class="py">p6 = Person("Ahmed", 25)</pre></div>
+  <div class="cell"><pre class="py">p5 == p6</pre>
+  <pre class="o" data-out="expr">False</pre></div>
+  <div class="note trap"><div class="lbl">Read the rule carefully</div><p>This <code>__eq__</code> compares <strong>age only</strong>, so <code>Person("Salma", 22) == Person("Omar", 22)</code> is <code>True</code> even though they're different people. You choose what "equal" means — choose deliberately (e.g. <code>self.name == other.name and self.age == other.age</code>).</p></div>
+  <div class="lab" id="lab-dunder">
+    <div class="lab-head"><span class="badge">try it</span><span class="title">What do print, repr and == give? Tick the methods your class defines</span></div>
+    <div class="lab-body">
+      <div class="row small"><label><input type="checkbox" id="du-str"> <code>__str__</code></label><label><input type="checkbox" id="du-repr"> <code>__repr__</code></label><label><input type="checkbox" id="du-eq"> <code>__eq__</code> (age only)</label></div>
+      <div class="small muted">a = Person("Salma", 22) &nbsp;·&nbsp; b = Person("Omar", 22)</div>
+      <div class="table-wrap"><table class="t" id="du-tab"></table></div>
+    </div>
+  </div>
+  <p>The object also keeps its attributes in a dictionary called <code>__dict__</code>:</p>
+  <div class="cell"><pre class="py">print(p5.__dict__)</pre>
+  <pre class="o">{'name': 'Ahmed', 'age': 26}</pre></div>
+</section>
+
+<section class="section" id="s-new">
+  <div class="sec-head"><span class="sec-num">3.5</span><h2><code>__new__</code> vs <code>__init__</code></h2></div>
+  <p>Creating an object is really <strong>two steps</strong>. When you call the class, Python first calls <code>__new__</code> to <strong>create</strong> the empty object, then <code>__init__</code> to <strong>initialise</strong> its attributes:</p>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>The lecturer's summary: <code>__init__</code> doesn't create the object, it only fills in the attribute values. The object itself is created by <code>__new__</code>, which reserves a place in memory for an object of that class. After <code>__new__</code> alone, the object exists but has no values yet: that's the empty <code>{}</code> below.</p></div>
+  <div class="cell" data-label="this one line…"><pre class="py">p = Person("John", 25)
+# p = object.__new__(Person, 'John', 25)
+# p.__init__("John", 25)</pre></div>
+  <p>The commented lines show the two steps. Let's do them by hand:</p>
+  <div class="cell" data-label="step 1: __new__ makes an empty object"><pre class="py">P = object.__new__(Person, "John", 25)</pre></div>
+  <div class="cell" data-label="it exists, but has no attributes yet"><pre class="py">print(P.__dict__)</pre>
+  <pre class="o">{}</pre></div>
+  <div class="cell" data-label="step 2: __init__ fills it in"><pre class="py">P.__init__("John", 25)</pre></div>
+  <div class="cell"><pre class="py">print(P.__dict__)</pre>
+  <pre class="o">{'name': 'John', 'age': 25}</pre></div>
+  <p>You can override <code>__new__</code> to watch (or control) the creation step. Its first parameter is <code>cls</code> — the <em>class</em>, because the object doesn't exist yet:</p>
+  <div class="cell" data-label="watching the two steps happen"><pre class="py">class Person:
+    def __new__(cls, name):
+        print(f'Creating a new {cls.__name__} object.... ')
+        obj = object.__new__(cls)
+        return obj
+
+    def __init__(self, name):
+        print(f'Initializing the Person object')
+        self.name = name</pre></div>
+  <div class="cell"><pre class="py">pn = Person("Ahmed")</pre>
+  <pre class="o">Creating a new Person object.... 
+Initializing the Person object</pre></div>
+  <div class="cell" data-label="__new__ can even set attributes itself"><pre class="py">class Person:
+    def __new__(cls, first_name, last_name):
+        obj = super().__new__(cls)
+
+        obj.first_name = first_name
+        obj.last_name = last_name
+
+        obj.full_name = f'{first_name} {last_name}'
+
+        return obj</pre></div>
+  <div class="cell"><pre class="py">pf = Person("Salma", "Alhagry")</pre></div>
+  <div class="cell"><pre class="py">pf.full_name</pre>
+  <pre class="o" data-out="expr">'Salma Alhagry'</pre></div>
+  <div class="cell"><pre class="py">print(pf.__dict__)</pre>
+  <pre class="o">{'first_name': 'Salma', 'last_name': 'Alhagry', 'full_name': 'Salma Alhagry'}</pre></div>
+  <div class="lab" id="lab-new">
+    <div class="lab-head"><span class="badge">see it</span><span class="title">What happens when you write <code>Person("Ahmed")</code></span></div>
+    <div class="lab-body">
+      <div class="row"><button class="btn primary" id="nw-next">next step ▶</button><button class="btn" id="nw-reset">restart</button><span class="small muted" id="nw-count"></span></div>
+      <svg class="dia" id="nw-svg" viewBox="0 0 640 200"></svg>
+      <div class="explain" id="nw-exp"></div>
+    </div>
+  </div>
+  <div class="table-wrap"><table class="t">
+    <tr><th></th><th><code>__new__(cls, …)</code></th><th><code>__init__(self, …)</code></th></tr>
+    <tr><td>job</td><td>create the object</td><td>initialise the object's attributes</td></tr>
+    <tr><td>runs</td><td>first</td><td>second, only if <code>__new__</code> returned an instance of the class</td></tr>
+    <tr><td>first parameter</td><td>the class</td><td>the new object</td></tr>
+    <tr><td>returns</td><td>the new object (must!)</td><td><code>None</code></td></tr>
+  </table></div>
+</section>
+
+<section class="section" id="s-type">
+  <div class="sec-head"><span class="sec-num">3.6</span><h2>The <code>type</code> class: classes are made at run time</h2></div>
+  <div class="cell"><pre class="py">type(pf)</pre>
+  <pre class="o" data-out="expr">__main__.Person</pre></div>
+  <div class="cell"><pre class="py">type(Person)</pre>
+  <pre class="o" data-out="expr">type</pre></div>
+  <div class="cell" data-label="a class IS an instance of type"><pre class="py">isinstance(Person, type)</pre>
+  <pre class="o" data-out="expr">True</pre></div>
+  <div class="cell"><pre class="py">type(int)</pre>
+  <pre class="o" data-out="expr">type</pre></div>
+  <div class="cell"><pre class="py">type(fun)</pre>
+  <pre class="o" data-out="expr">function</pre></div>
+  <div class="cell"><pre class="py">type(type(fun))</pre>
+  <pre class="o" data-out="expr">type</pre></div>
+  <h3>Classes can be changed after they're made</h3>
+  <p>Because a class is an ordinary object, you can add attributes and even methods to it later. Existing and new instances see them through the class:</p>
+  <div class="cell" data-label="an empty class"><pre class="py">class test:
+    pass</pre></div>
+  <div class="cell"><pre class="py">test.x = 10</pre></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>Two things used here. <code>pass</code> is needed because a class (or function) body can't be empty: without it Python raises an error. <code>lambda</code> is a short way to write a small function in one line without <code>def</code>: <code>lambda self: print("Hello There!")</code> is a function that takes <code>self</code> and prints.</p></div>
+  <div class="cell" data-label="attach a method (a lambda that takes self)"><pre class="py">test.fun = lambda self: print("Hello There!")</pre></div>
+  <div class="cell"><pre class="py">t = test()</pre></div>
+  <div class="cell" data-label="the instance itself is empty…"><pre class="py">print(t.__dict__)</pre>
+  <pre class="o">{}</pre></div>
+  <div class="cell" data-label="…but finds x and fun on its class"><pre class="py">t.x</pre>
+  <pre class="o" data-out="expr">10</pre></div>
+  <div class="cell"><pre class="py">t.fun()</pre>
+  <pre class="o">Hello There!</pre></div>
+  <h3>Building a class with <code>type(name, bases, dict)</code></h3>
+  <p>Called with <strong>three</strong> arguments, <code>type</code> doesn't tell you a type — it <strong>creates a new class</strong>: <code>type(name, bases, attributes)</code>.</p>
+  <div class="cell" data-label="a function and a base class to use"><pre class="py">def my_fun(self):
+    print("Test function")
+
+class Base:
+    def fun(self):
+        print("Base class function")</pre></div>
+  <div class="cell" data-label="make a class without the class keyword"><pre class="py">Test = type('Test', (Base, ), dict(x = 10, test_method=my_fun))</pre></div>
+  <div class="cell"><pre class="py">type(Test)</pre>
+  <pre class="o" data-out="expr">type</pre></div>
+  <div class="cell"><pre class="py">t1 = Test()</pre></div>
+  <div class="cell"><pre class="py">type(t1)</pre>
+  <pre class="o" data-out="expr">__main__.Test</pre></div>
+  <div class="cell"><pre class="py">t1.test_method()</pre>
+  <pre class="o">Test function</pre></div>
+  <div class="cell" data-label="inherited from Base"><pre class="py">t1.fun()</pre>
+  <pre class="o">Base class function</pre></div>
+  <div class="cell"><pre class="py">t1.__dict__</pre>
+  <pre class="o" data-out="expr">{}</pre></div>
+  <div class="grid">
+    <div class="obj"><div class="ty">with <b>type()</b></div><div class="bd"><pre class="hl-py">Test = type('Test', (Base, ),
+            dict(x=10, test_method=my_fun))</pre></div></div>
+    <div class="obj"><div class="ty">is the same as the <b>class</b> statement</div><div class="bd"><pre class="hl-py">class Test(Base):
+    x = 10
+    test_method = my_fun</pre></div></div>
+  </div>
+  <div class="lab" id="lab-type">
+    <div class="lab-head"><span class="badge">try it</span><span class="title">Class factory: build a class from a name chosen at run time</span></div>
+    <div class="lab-body">
+      <div class="row small"><span class="muted">class name</span><input class="txt" id="ty-name" value="Car" style="width:120px"><span class="muted">attribute</span><input class="txt" id="ty-attr" value="wheels" style="width:110px"><span class="muted">=</span><input class="txt" id="ty-val" value="4" style="width:70px"><button class="btn primary" id="ty-run">create &amp; test ▶</button></div>
+      <pre class="hl-py codeview" id="ty-code" style="padding:.6rem .9rem;white-space:pre"></pre>
+      <pre class="codeview" id="ty-out" style="padding:.6rem .9rem;white-space:pre">(press create &amp; test)</pre>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="s-metaclass">
+  <div class="sec-head"><span class="sec-num">3.7</span><h2>Metaclasses</h2></div>
+  <p>From the slide, three ways of saying the same thing: a <strong>metaclass</strong> is a class that defines the behaviour of classes; a class whose instances are classes; a class that creates other classes. <code>type</code> is the default one. You write your own by <strong>inheriting from <code>type</code></strong>, and you use one when you want to change or record classes <strong>automatically when they are created</strong>.</p>
+  <p>The lecture's example keeps a registry of every class made with the metaclass <code>Animal</code>:</p>
+  <div class="cell" data-label="a metaclass inherits from type"><pre class="py">class Animal(type):
+    registery = {}
+
+    def __new__(cls, name, bases, dct):
+        new_class = super().__new__(cls, name, bases, dct)
+        if name not in Animal.registery:
+            Animal.registery[name] = new_class
+        return new_class
+
+    @classmethod
+    def list_animals(cls):
+        print(cls.registery)</pre></div>
+  <ul>
+    <li><code>Animal.__new__</code> runs every time a <strong>class</strong> (not an object!) is created with <code>metaclass=Animal</code>. Its arguments are exactly the three that <code>type(name, bases, dict)</code> takes.</li>
+    <li><code>super().__new__(…)</code> lets <code>type</code> build the class as usual; then the metaclass records it.</li>
+    <li><code>@classmethod</code> means <code>list_animals</code> receives the class (<code>cls</code>) instead of an instance — another decorator from this lecture.</li>
+  </ul>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>The use case from class: a base class such as <code>Person</code> gets many subclasses (<code>Student</code>, <code>Employee</code>, …). A metaclass can keep a <strong>registry</strong> of every class created that way, automatically, without adding any code to the subclasses themselves.</p></div>
+  <div class="cell" data-label="just defining these classes registers them"><pre class="py">class Dog(metaclass=Animal):
+    pass
+
+class Cat(metaclass=Animal):
+    pass
+
+class Shark(metaclass=Animal):
+    pass</pre></div>
+  <div class="cell"><pre class="py">Animal.list_animals()</pre>
+  <pre class="o">{'Dog': &lt;class '__main__.Dog'&gt;, 'Cat': &lt;class '__main__.Cat'&gt;, 'Shark': &lt;class '__main__.Shark'&gt;}</pre></div>
+  <div class="cell" data-label="Cat's type is now our metaclass"><pre class="py">type(Cat)</pre>
+  <pre class="o" data-out="expr">__main__.Animal</pre></div>
+  <div class="cell"><pre class="py">type(Animal)</pre>
+  <pre class="o" data-out="expr">type</pre></div>
+  <div class="lab" id="lab-reg">
+    <div class="lab-head"><span class="badge">see it</span><span class="title">The registry fills itself as classes are defined</span></div>
+    <div class="lab-body">
+      <div class="row small"><span class="muted">class</span><input class="txt" id="rg-name" value="Horse" style="width:130px"><span class="muted">(metaclass=Animal): pass</span><button class="btn primary" id="rg-add">define ▶</button><button class="btn" id="rg-reset">reset</button></div>
+      <div class="small muted">Animal.registery</div>
+      <div class="chips" id="rg-chips"></div>
+      <div class="explain" id="rg-exp"></div>
+    </div>
+  </div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>When would you need one? The lecturer: an ordinary application developer won't. Metaclasses matter to people building tools that other programmers will use — frameworks, libraries, even languages — where classes must behave in a particular, controlled way.</p></div>
+  <div class="note plain"><div class="lbl">Do you need one?</div><p>The slide quotes Tim Peters: metaclasses are "deeper magic" that 99% of users never need. Frameworks use them (Django models, for example, register every model class this way); in day-to-day data science, decorators and ordinary classes cover almost everything.</p></div>
+</section>
+
+<section class="section" id="s-gen">
+  <div class="sec-head"><span class="sec-num">3.8</span><h2>Generators</h2></div>
+  <p>An <strong>iterator</strong> is an object you can loop over one item at a time — lists, tuples, dictionaries and sets all give you one. A <strong>generator</strong> is a function that returns an iterator using the <code>yield</code> keyword: it looks like a normal function, but where a normal function <code>return</code>s one value and is finished, a generator <code>yield</code>s a value, <strong>pauses</strong>, and continues from the same spot the next time you ask.</p>
+  <div class="cell" data-label="the familiar loop (output shortened)"><pre class="py">for i in range(100):
+    print(i, end=" ")</pre>
+  <pre class="o">0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99</pre></div>
+  <p>(The notebook prints each number on its own line; <code>end=" "</code> just keeps the page short.) Here is our own <code>range</code>, as a generator:</p>
+  <div class="cell" data-label="my_range: yields 0, 1, …, n-1"><pre class="py">def my_range(n):
+    i = 0
+    while i &lt; n:
+        yield i
+        i += 1</pre></div>
+  <div class="cell"><pre class="py">for r in my_range(10):
+    print(r)</pre>
+  <pre class="o">0
+1
+2
+3
+4
+5
+6
+7
+8
+9</pre></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>The lecturer's comparison: if a function has to produce 1,000 numbers and returns them all at once, all 1,000 have to be stored in memory. A generator hands them back one at a time with <code>yield</code>, just like <code>range</code> does, so only the current value is kept. A question from class: is it a linked list? No — it's a function that gives back one value each time it's asked.</p></div>
+  <h3>Driving a generator by hand with <code>next()</code></h3>
+  <div class="cell" data-label="calling it runs NOTHING yet — it returns a generator object"><pre class="py">r = my_range(5)</pre></div>
+  <div class="cell"><pre class="py">next(r)</pre>
+  <pre class="o" data-out="expr">0</pre></div>
+  <div class="cell"><pre class="py">next(r)</pre>
+  <pre class="o" data-out="expr">1</pre></div>
+  <div class="cell"><pre class="py">next(r)</pre>
+  <pre class="o" data-out="expr">2</pre></div>
+  <div class="cell"><pre class="py">next(r)</pre>
+  <pre class="o" data-out="expr">3</pre></div>
+  <div class="cell"><pre class="py">next(r)</pre>
+  <pre class="o" data-out="expr">4</pre></div>
+  <div class="cell" data-label="nothing left: StopIteration"><pre class="py">next(r)</pre>
+  <pre class="o err">StopIteration: </pre></div>
+  <p>A <code>for</code> loop is just <code>next()</code> called repeatedly, stopping quietly at <code>StopIteration</code>. A generator can also have several <code>yield</code>s with code between them:</p>
+  <div class="cell" data-label="several yields — execution pauses at each one"><pre class="py">def gen():
+    x = 2
+    y = 3
+    yield x, y, x+y
+    z = 12
+    yield z/x
+    yield z/y</pre></div>
+  <div class="cell"><pre class="py">g = gen()</pre></div>
+  <div class="cell"><pre class="py">next(g)</pre>
+  <pre class="o" data-out="expr">(2, 3, 5)</pre></div>
+  <div class="cell"><pre class="py">next(g)</pre>
+  <pre class="o" data-out="expr">6.0</pre></div>
+  <div class="cell"><pre class="py">next(g)</pre>
+  <pre class="o" data-out="expr">4.0</pre></div>
+  <div class="cell"><pre class="py">next(g)</pre>
+  <pre class="o err">StopIteration: </pre></div>
+  <div class="lab" id="lab-gen">
+    <div class="lab-head"><span class="badge">see it</span><span class="title">Step through <code>gen()</code>: where is it paused, what does it remember?</span></div>
+    <div class="lab-body">
+      <div class="row"><button class="btn" id="gn-new">g = gen()</button><button class="btn primary" id="gn-next">next(g) ▶</button></div>
+      <div class="codeview" id="gn-code"></div>
+      <div class="row small"><span class="stat"><span class="k2">local variables</span> <span class="v" id="gn-loc">—</span></span><span class="stat"><span class="k2">last value given</span> <span class="v" id="gn-val">—</span></span></div>
+      <div class="explain" id="gn-exp"></div>
+    </div>
+  </div>
+  <h3>Why bother? Memory</h3>
+  <p>The slide's last point: a generator doesn't produce all its values at once, which can mean better performance. A list holds every item in memory; a generator holds only its current state.</p>
+  <div class="cell" data-label="extra — a million squares: list vs generator"><pre class="py">import sys
+
+squares_list = [i * i for i in range(1_000_000)]   # square brackets: builds everything now
+squares_gen  = (i * i for i in range(1_000_000))   # round brackets: a generator expression
+
+print(f"list:      {sys.getsizeof(squares_list):>10,} bytes")
+print(f"generator: {sys.getsizeof(squares_gen):>10,} bytes")
+print(sum(squares_gen) == sum(squares_list))       # same values in the end</pre>
+  <pre class="o">list:       4,224,364 bytes
+generator:        104 bytes
+True</pre></div>
+  <div class="cell" data-label="extra — generators can even be endless; take just what you need"><pre class="py">import itertools
+
+def count_up(start):
+    while True:              # never ends — fine, values are only made on request
+        yield start
+        start += 1
+
+print(list(itertools.islice(count_up(100), 5)))</pre>
+  <pre class="o">[100, 101, 102, 103, 104]</pre></div>
+  <div class="note trap"><div class="lbl">One pass only</div><p>A generator is used up once it has been looped over. In the cell above, <code>sum(squares_gen)</code> consumed it; a second <code>sum(squares_gen)</code> would give <code>0</code>. Call the generator function again (or rebuild the expression) to start over.</p></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>Submission tips from the lecturer for Assignment 1: attach your code as a <code>.py</code> or <code>.ipynb</code> file. If you send a Google Drive link instead, make sure its access is open — or simply download the file and attach it. Keep your code simple and readable (the habits from Lecture 1).</p></div>
+  <div class="note lec"><div class="lbl">Assignment 1</div><p>The lecture ends with Assignment 1 (a Fibonacci generator and a <code>Restaurant</code> class), due Wednesday 11-11-2026. This site doesn't include solutions — use the generator and class sections above as your toolkit.</p></div>
+</section>
+
+<section class="section" id="s-quiz">
+  <div class="sec-head"><span class="sec-num">✓</span><h2>Check yourself</h2></div>
+  <div class="quiz" data-id="l3">
+    <div class="quiz-top"><h3>Lecture 3 quiz</h3><span class="quiz-score"></span></div>
+    <div class="q" data-a="2"><div class="q-text"><code>add_five = outer(5)</code>. What is <code>add_five</code>?</div>
+      <div class="q-opts"><button class="q-opt">The number 5</button><button class="q-opt">None</button><button class="q-opt">The inner function, which remembers x = 5 (a closure)</button><button class="q-opt">An error</button></div>
+      <div class="q-fb"><code>outer</code> returns <code>inner</code> without calling it. <code>add_five(4)</code> then gives 9.</div></div>
+    <div class="q" data-a="0"><div class="q-text"><code>@make_pretty</code> above <code>def ordinary(): …</code> is the same as…</div>
+      <div class="q-opts"><button class="q-opt"><code>ordinary = make_pretty(ordinary)</code></button><button class="q-opt"><code>make_pretty = ordinary(make_pretty)</code></button><button class="q-opt"><code>ordinary()</code> then <code>make_pretty()</code></button><button class="q-opt"><code>make_pretty.ordinary()</code></button></div>
+      <div class="q-fb">The decorator receives the function and the name is rebound to whatever it returns.</div></div>
+    <div class="q" data-a="3"><div class="q-text">With <code>@star</code> on top of <code>@percent</code>, which line prints first?</div>
+      <div class="q-opts"><button class="q-opt">The message</button><button class="q-opt">%%%%…</button><button class="q-opt">They print at the same time</button><button class="q-opt">*****…</button></div>
+      <div class="q-fb"><code>printer = star(percent(printer))</code>: star is the outer layer, so its line comes first and last.</div></div>
+    <div class="q" data-a="1"><div class="q-text">A class has <code>__repr__</code> but no <code>__str__</code>. What does <code>print(obj)</code> show?</div>
+      <div class="q-opts"><button class="q-opt">The default &lt;… object at 0x…&gt;</button><button class="q-opt">The <code>__repr__</code> text — str falls back to repr</button><button class="q-opt">Nothing</button><button class="q-opt">An error</button></div>
+      <div class="q-fb">Without <code>__str__</code>, Python uses <code>__repr__</code> for printing too.</div></div>
+    <div class="q" data-a="2"><div class="q-text">With the lecture's <code>__eq__</code>, is <code>Person("Salma", 22) == Person("Omar", 22)</code>?</div>
+      <div class="q-opts"><button class="q-opt">False — different names</button><button class="q-opt">False — different objects</button><button class="q-opt">True — it compares age only</button><button class="q-opt">Error</button></div>
+      <div class="q-fb"><code>return self.age == other.age</code> ignores the name.</div></div>
+    <div class="q" data-a="0"><div class="q-text">When you write <code>Person("Ahmed")</code>, what runs first?</div>
+      <div class="q-opts"><button class="q-opt"><code>__new__</code> creates the object, then <code>__init__</code> initialises it</button><button class="q-opt"><code>__init__</code>, then <code>__new__</code></button><button class="q-opt">Only <code>__init__</code></button><button class="q-opt"><code>__str__</code></button></div>
+      <div class="q-fb">Create, then initialise. <code>__new__</code> gets the class (<code>cls</code>); <code>__init__</code> gets the new object (<code>self</code>).</div></div>
+    <div class="q" data-a="1"><div class="q-text">What does <code>type('Test', (Base,), dict(x=10))</code> do?</div>
+      <div class="q-opts"><button class="q-opt">Returns the string 'Test'</button><button class="q-opt">Creates a new class Test that inherits from Base and has x = 10</button><button class="q-opt">Checks whether Test is a Base</button><button class="q-opt">Creates an object of class Base</button></div>
+      <div class="q-fb">With three arguments, <code>type</code> builds a class: name, bases, attributes.</div></div>
+    <div class="q" data-a="3"><div class="q-text">When does the metaclass <code>Animal.__new__</code> run?</div>
+      <div class="q-opts"><button class="q-opt">Every time you create a Dog object</button><button class="q-opt">Only when you call list_animals()</button><button class="q-opt">Never</button><button class="q-opt">When a class like <code>class Dog(metaclass=Animal)</code> is defined</button></div>
+      <div class="q-fb">Metaclasses create classes, so they act at class-definition time.</div></div>
+    <div class="q" data-a="2"><div class="q-text"><code>r = my_range(5)</code>. How much of the function body has run?</div>
+      <div class="q-opts"><button class="q-opt">All of it</button><button class="q-opt">Up to the first yield</button><button class="q-opt">None — it only made a generator object; the code runs on next()</button><button class="q-opt">The first line</button></div>
+      <div class="q-fb">Each <code>next()</code> runs until the next <code>yield</code> and pauses there.</div></div>
+    <div class="q" data-a="1"><div class="q-text">What happens when you call <code>next()</code> on a finished generator?</div>
+      <div class="q-opts"><button class="q-opt">It starts again from the beginning</button><button class="q-opt">It raises StopIteration</button><button class="q-opt">It returns None</button><button class="q-opt">It returns the last value again</button></div>
+      <div class="q-fb">A <code>for</code> loop catches StopIteration for you; a bare <code>next()</code> shows it.</div></div>
+    <div class="row"><button class="btn quiz-reset">↺ try again</button></div>
+  </div>
+</section>
+
+<section class="section" id="s-sum">
+  <div class="sec-head"><span class="sec-num">★</span><h2>Summary</h2></div>
+  <div class="summary"><ul>
+    <li><strong>Metaprogramming</strong>: code that makes or changes code. Possible because everything — even functions and classes — is an object; <code>type(type(anything))</code> is <code>type</code>.</li>
+    <li>Functions can be <strong>nested</strong>, <strong>returned</strong> and <strong>passed</strong>. An inner function that remembers outer variables is a <strong>closure</strong>.</li>
+    <li>A <strong>decorator</strong> wraps a function to change its behaviour without editing it. <code>@d</code> = <code>f = d(f)</code>. Stacked decorators apply bottom-up; the top one is outermost.</li>
+    <li><code>__str__</code> → readable (print); <code>__repr__</code> → unambiguous (repr, Out[], lists); <code>__eq__</code> → what <code>==</code> means (default: same object).</li>
+    <li>Object creation = <code>__new__</code> (create, gets <code>cls</code>) then <code>__init__</code> (initialise, gets <code>self</code>).</li>
+    <li><code>type(name, bases, dict)</code> builds a class at run time. A <strong>metaclass</strong> (inherits from <code>type</code>) controls class creation, e.g. auto-registering classes.</li>
+    <li>A <strong>generator</strong> uses <code>yield</code> to give values one at a time, pausing in between; <code>next()</code> resumes it, <code>StopIteration</code> ends it. Saves memory.</li>
+  </ul></div>
+</section>
+
+<div id="lec-nav"></div>
+</main>
+<aside class="toc"></aside>
+</div>
+
+<script>
+document.addEventListener('ds:ready', () => {
+  const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
+  const esc = window.DS_ESC, HL = window.DS_HL, K = window.DS_KERNEL;
+  const DEFS = '<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>';
+  const hl = s => HL ? HL(s) : esc(s);
+
+  /* ---------- decorator stack builder ---------- */
+  (function () {
+    const DEC = {
+      star: { ch: '*', c: 'var(--py-yellow)' },
+      percent: { ch: '%', c: 'var(--violet)' },
+      dash: { ch: '-', c: 'var(--green)' }
+    };
+    let stack = ['star', 'percent'];      // top first
+    function defs() {
+      const used = [...new Set(stack)];
+      return used.map(d => `def ${d}(fun):\n    def inner(msg):\n        print("${DEC[d].ch}" * 20)\n        fun(msg)\n        print("${DEC[d].ch}" * 20)\n    return inner\n`).join('\n');
+    }
+    function code() { return stack.map(d => '@' + d).join('\n') + (stack.length ? '\n' : '') + 'def printer(msg):\n    print(msg)'; }
+    function draw() {
+      $('#on-code').innerHTML = hl(code());
+      const msg = $('#on-msg').value;
+      $('#on-eq').innerHTML = stack.length ? 'Python does: <code>printer = ' + esc(stack.map(d => d + '(').join('') + 'printer' + ')'.repeat(stack.length)) + '</code>' : 'No decorators: printer is the plain function.';
+      let inner = `<div class="layer" style="border-style:dashed">printer("${esc(msg)}")</div>`;
+      for (let i = stack.length - 1; i >= 0; i--) {
+        const d = DEC[stack[i]];
+        inner = `<div class="layer" style="border-color:${d.c}"><div>${d.ch.repeat(10)} <span class="muted">@${stack[i]}</span></div>${inner}<div>${d.ch.repeat(10)}</div></div>`;
+      }
+      $('#on-layers').innerHTML = inner;
+    }
+    $$('#lab-onion [data-d]').forEach(b => b.addEventListener('click', () => { if (stack.length < 5) stack.unshift(b.dataset.d); draw(); }));
+    $('#lab-onion [data-op=pop]').addEventListener('click', () => { stack.shift(); draw(); });
+    $('#lab-onion [data-op=clear]').addEventListener('click', () => { stack = []; draw(); });
+    $('#on-msg').addEventListener('input', draw);
+    $('#on-run').addEventListener('click', async () => {
+      const out = $('#on-out'); out.textContent = 'running in Python…';
+      const src = defs() + '\n' + code() + '\n\nprinter(' + JSON.stringify($('#on-msg').value) + ')';
+      try { const r = await K.run(src); out.textContent = (r.out || '') + (r.err ? r.err : ''); } catch (e) { out.textContent = 'Could not start Python: ' + e.message; }
+    });
+    draw();
+  })();
+
+  /* ---------- __str__ / __repr__ / __eq__ ---------- */
+  (function () {
+    function upd() {
+      const S = $('#du-str').checked, R = $('#du-repr').checked, E = $('#du-eq').checked;
+      const def = '&lt;__main__.Person object at 0x…&gt;';
+      const reprA = R ? 'Person(Salma, 22)' : def;
+      const strA = S ? 'Salma, 22' : reprA;
+      const rows = [
+        ['print(a)', strA, S ? 'uses <code>__str__</code>' : (R ? 'no __str__ → falls back to <code>__repr__</code>' : 'default')],
+        ['repr(a)', reprA, R ? 'uses <code>__repr__</code>' : 'default'],
+        ['[a]', '[' + (R ? 'Person(Salma, 22)' : '&lt;__main__.Person object at 0x…&gt;') + ']', 'lists show items with repr'],
+        ['a == b', E ? 'True' : 'False', E ? 'both are 22 — names ignored!' : 'default: same object? no'],
+        ['a == a', 'True', 'an object always equals itself']
+      ];
+      $('#du-tab').innerHTML = '<tr><th>expression</th><th>result</th><th>why</th></tr>' + rows.map(r => `<tr><td class="mono">${r[0]}</td><td class="mono">${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+    }
+    ['#du-str', '#du-repr', '#du-eq'].forEach(id => $(id).addEventListener('change', upd)); upd();
+  })();
+
+  /* ---------- __new__ then __init__ ---------- */
+  (function () {
+    const STEPS = [
+      { box: 0, exp: 'You write <b>Person("Ahmed")</b>. Calling a class is handled by its metaclass, <b>type</b>, which runs the next two steps in order.' },
+      { box: 1, obj: '{}', exp: '<b>Person.__new__(Person, "Ahmed")</b> runs first. It receives the <b>class</b> (cls), creates a blank object with <code>object.__new__(cls)</code> and returns it. In the lecture\'s version it also prints "Creating a new Person object....".' },
+      { box: 2, obj: "{'name': 'Ahmed'}", exp: '<b>__init__(obj, "Ahmed")</b> runs next, with the new object as <b>self</b>, and sets <code>self.name = "Ahmed"</code>. It prints "Initializing the Person object" and returns None.' },
+      { box: 3, obj: "{'name': 'Ahmed'}", exp: 'The finished object is handed back and bound to the name <b>pn</b>. Done: create, then initialise.' }
+    ];
+    let i = 0;
+    function draw() {
+      const s = STEPS[i], L = ['Person("Ahmed")', '__new__(cls)', '__init__(self)', 'pn'];
+      let h = DEFS;
+      L.forEach((t, k) => {
+        const x = 12 + k * 158, on = k === s.box, done = k < s.box;
+        h += `<rect class="${k === 3 ? 'inst' : 'cls'}" x="${x}" y="30" width="138" height="54" rx="10" style="${on ? 'stroke:var(--coral);stroke-width:3' : ''};opacity:${on || done ? 1 : .35}"/><text x="${x + 69}" y="62" text-anchor="middle" style="font-weight:700">${esc(t)}</text>`;
+        if (k < 3) h += `<path class="arrow ${done ? 'hot' : ''}" d="M${x + 138} 57 L ${x + 156} 57" marker-end="url(#ah)"/>`;
+      });
+      if (s.obj) h += `<rect class="inst" x="160" y="118" width="320" height="56" rx="10"/><text x="176" y="140" class="muted">the object's __dict__</text><text x="176" y="162" style="font-weight:700">${esc(s.obj)}</text>`;
+      $('#nw-svg').innerHTML = h;
+      $('#nw-exp').innerHTML = s.exp;
+      $('#nw-count').textContent = `step ${i + 1} / ${STEPS.length}`;
+      $('#nw-next').disabled = i === STEPS.length - 1;
+    }
+    $('#nw-next').addEventListener('click', () => { if (i < STEPS.length - 1) i++; draw(); });
+    $('#nw-reset').addEventListener('click', () => { i = 0; draw(); });
+    draw();
+  })();
+
+  /* ---------- class factory with type() ---------- */
+  (function () {
+    function src() {
+      const n = ($('#ty-name').value.trim().replace(/\W/g, '') || 'Car').replace(/^(\d)/, '_$1');
+      const a = ($('#ty-attr').value.trim().replace(/\W/g, '') || 'wheels').replace(/^(\d)/, '_$1');
+      let v = $('#ty-val').value.trim() || '0';
+      if (!/^-?\d+(\.\d+)?$/.test(v) && !/^(True|False|None)$/.test(v)) v = JSON.stringify(v);
+      return { n, a, v, code: `def describe(self):\n    return f"I am a {type(self).__name__} with ${a} = {self.${a}}"\n\n${n} = type('${n}', (), dict(${a}=${v}, describe=describe))\n\nobj = ${n}()\nprint(type(obj))\nprint(obj.${a})\nprint(obj.describe())\nprint(type(${n}))` };
+    }
+    function draw() { $('#ty-code').innerHTML = hl(src().code); }
+    ['#ty-name', '#ty-attr', '#ty-val'].forEach(id => $(id).addEventListener('input', draw));
+    $('#ty-run').addEventListener('click', async () => {
+      const out = $('#ty-out'); out.textContent = 'running in Python…';
+      try { const r = await K.run(src().code); out.textContent = (r.out || '') + (r.err || ''); } catch (e) { out.textContent = 'Could not start Python: ' + e.message; }
+    });
+    draw();
+  })();
+
+  /* ---------- metaclass registry ---------- */
+  (function () {
+    let reg, last;
+    function reset() { reg = ['Dog', 'Cat', 'Shark']; last = null; draw('These three were registered by the notebook\'s cells. Define another class to watch it appear.'); }
+    function draw(msg) {
+      $('#rg-chips').innerHTML = '{ ' + reg.map(n => `<span class="${n === last ? 'new' : ''}">'${esc(n)}': &lt;class '__main__.${esc(n)}'&gt;</span>`).join('') + ' }';
+      $('#rg-exp').innerHTML = msg;
+    }
+    $('#rg-add').addEventListener('click', () => {
+      const n = $('#rg-name').value.trim().replace(/\W/g, '');
+      if (!n || /^\d/.test(n)) return draw('That isn\'t a valid class name.');
+      if (reg.includes(n)) { last = null; return draw(`<b>${esc(n)}</b> is already in the registry. <code>if name not in Animal.registery</code> skips it, so the first one is kept.`); }
+      reg.push(n); last = n;
+      draw(`Defining <b>class ${esc(n)}(metaclass=Animal)</b> called <b>Animal.__new__(Animal, '${esc(n)}', (), {...})</b>. It built the class with <code>super().__new__</code> and stored it — no extra code in ${esc(n)} needed. <code>type(${esc(n)})</code> is <b>__main__.Animal</b>.`);
+      const pool = ['Horse', 'Eagle', 'Camel', 'Whale', 'Falcon', 'Fox', 'Owl'];
+      $('#rg-name').value = pool.find(p => !reg.includes(p)) || '';
+    });
+    $('#rg-reset').addEventListener('click', reset);
+    reset();
+  })();
+
+  /* ---------- generator stepper ---------- */
+  (function () {
+    const LINES = ['def gen():', '    x = 2', '    y = 3', '    yield x, y, x+y', '    z = 12', '    yield z/x', '    yield z/y'];
+    // state: -1 = no generator; 0 = created (nothing run); 1..3 = paused at yield k; 4 = finished
+    const ST = [
+      { cur: -1, ran: [], loc: '(nothing has run)', val: '—', exp: '<b>g = gen()</b> ran <i>none</i> of the body. You just got a paused generator object, waiting at the very top.' },
+      { cur: 3, ran: [1, 2, 3], loc: 'x=2, y=3', val: '(2, 3, 5)', exp: '<b>next(g)</b> ran lines 1–3 and stopped at the first <b>yield</b>, handing out <b>(2, 3, 5)</b>. x and y are kept alive while it waits.' },
+      { cur: 5, ran: [4, 5], loc: 'x=2, y=3, z=12', val: '6.0', exp: 'Resumed <i>right after</i> the first yield: set z = 12, then yielded <b>12/2 = 6.0</b>. (Division with / always gives a float.)' },
+      { cur: 6, ran: [6], loc: 'x=2, y=3, z=12', val: '4.0', exp: 'Resumed again and yielded <b>12/3 = 4.0</b>.' },
+      { cur: -1, ran: [], loc: '(gone)', val: 'StopIteration', exp: 'No more yields: the function reached its end, so <b>next(g)</b> raises <b>StopIteration</b>. A for-loop would simply stop here. Press <b>g = gen()</b> to get a fresh generator.' }
+    ];
+    let s = -1;
+    function draw() {
+      const st = s < 0 ? null : ST[s];
+      $('#gn-code').innerHTML = LINES.map((l, k) => `<span class="ln ${st && st.cur === k ? 'cur' : ''} ${st && st.ran.includes(k) && st.cur !== k ? 'ran' : ''}" data-n="${k + 1}">${hl(l)}</span>`).join('');
+      $('#gn-loc').textContent = st ? st.loc : '—';
+      $('#gn-val').textContent = st ? st.val : '—';
+      $('#gn-exp').innerHTML = st ? st.exp : 'Press <b>g = gen()</b> to create a generator.';
+      $('#gn-next').disabled = s < 0 || s >= ST.length - 1;
+    }
+    $('#gn-new').addEventListener('click', () => { s = 0; draw(); });
+    $('#gn-next').addEventListener('click', () => { if (s >= 0 && s < ST.length - 1) s++; draw(); });
+    draw();
+  })();
+});
+</script>
+</body>
+</html>

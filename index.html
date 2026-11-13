@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DS588 · Advanced Programming for Data Science</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/site.js"></script>
+</head>
+<body data-page="home">
+
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="eyebrow">DS588 <b>·</b> Semester 2 <b>·</b> Python</div>
+      <h1>Advanced Programming for <span class="u">Data Science</span></h1>
+      <p class="lead">Interactive study notes for the course. Every code cell from the lecture notebooks is here with its real output — and a real Python 3.12 runs in your browser, so you can edit any cell and run it yourself. No installation, nothing to set up.</p>
+      <div class="tags"><span>performance</span><span>OOP</span><span>decorators</span><span>metaclasses</span><span>generators</span></div>
+      <div class="meta"><span><b>Lecturer:</b> Salma Alhagry</span><span><b>Grading:</b> assignments 10% · project 30% · final 60%</span></div>
+    </div>
+    <div class="repl" aria-hidden="true"><span class="p">&gt;&gt;&gt;</span> import this<br><span class="o">Beautiful is better than ugly.</span><br><span class="o">Explicit is better than implicit.</span><br><span class="o">Simple is better than complex.</span><br><span class="o">Readability counts.</span><br><span class="p">&gt;&gt;&gt;</span> <span class="cursor"></span></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="sec-title"><h2>Lectures</h2><span class="c2">pick up where you left off</span></div>
+  <div class="lecs">
+    <a class="lec" href="lecture1.html" data-id="l1">
+      <div class="ty">lecture <b>01</b> · lecture1.html</div>
+      <div class="bd">
+        <h3>Introduction: Python &amp; Performance</h3>
+        <p>What Python is, why it's slower than C (interpreter, dynamic typing, the GIL), and the habits that make your code faster: list comprehensions, <code>join</code>, local names, built-ins. Profiling, NumPy vectorisation, Hadoop and Spark.</p>
+        <div class="tags"><span>bytecode</span><span>GIL</span><span>timeit</span><span>cProfile</span><span>NumPy</span><span>MapReduce</span></div>
+        <div class="prog"></div>
+      </div>
+    </a>
+    <a class="lec" href="lecture2.html" data-id="l2">
+      <div class="ty">lecture <b>02</b> · lecture2.html</div>
+      <div class="bd">
+        <h3>Object-Oriented Programming</h3>
+        <p>Classes and objects, <code>__init__</code> and <code>self</code>, instance vs class attributes, <code>getattr</code>, inheritance, polymorphism, and encapsulation with <code>_protected</code> and <code>__private</code> names.</p>
+        <div class="tags"><span>class</span><span>self</span><span>inheritance</span><span>polymorphism</span><span>name mangling</span></div>
+        <div class="prog"></div>
+      </div>
+    </a>
+    <a class="lec" href="lecture3.html" data-id="l3">
+      <div class="ty">lecture <b>03</b> · lecture3.html</div>
+      <div class="bd">
+        <h3>Decorators, Metaclasses &amp; Generators</h3>
+        <p>Functions as objects and closures, decorators and how they stack, <code>__str__</code> / <code>__repr__</code> / <code>__eq__</code>, <code>__new__</code> vs <code>__init__</code>, building classes with <code>type()</code>, metaclasses, and <code>yield</code>.</p>
+        <div class="tags"><span>@decorator</span><span>__repr__</span><span>__new__</span><span>type()</span><span>yield</span></div>
+        <div class="prog"></div>
+      </div>
+    </a>
+    <a class="lec" href="reference.html" data-id="ref">
+      <div class="ty">reference · reference.html</div>
+      <div class="bd">
+        <h3>Cheat sheet</h3>
+        <p>All the syntax from the three lectures on one page: speed tips, class templates, special methods, decorator and generator patterns, and a glossary. Searchable.</p>
+        <div class="tags"><span>syntax</span><span>patterns</span><span>glossary</span></div>
+        <div class="prog"></div>
+      </div>
+    </a>
+  </div>
+
+  <div class="sec-title"><h2>How to use these notes</h2></div>
+  <div class="grid">
+    <div class="obj"><div class="ty"><b>cells</b></div><div class="bd"><p>Each grey box is a notebook cell with its saved output underneath, exactly as the notebook produced it. Press <strong>▶ run</strong> to run it live, <strong>✎ edit</strong> to change the code (Shift+Enter runs), and <strong>⏫ run all above</strong> if a cell needs variables from earlier ones.</p></div></div>
+    <div class="obj"><div class="ty"><b>live Python</b></div><div class="bd"><p>The first run downloads Python (about 10 MB, then cached) — give it a few seconds. All cells on a page share one namespace, like one notebook. The pill in the corner shows its state; <strong>restart</strong> clears every variable.</p></div></div>
+    <div class="obj"><div class="ty"><b>labs</b></div><div class="bd"><p>Dark-headed panels are hands-on labs: bytecode viewer, speed races, attribute lookup diagrams, a decorator stack builder, a generator stepper. Click around — you can't break anything.</p></div></div>
+    <div class="obj"><div class="ty"><b>colour key</b></div><div class="bd"><p><span class="badge-k" style="color:var(--py-blue);font-weight:700">blue</span> plain-English explanations · <span style="color:var(--coral);font-weight:700">coral</span> common traps · <span style="color:var(--py-yellow);font-weight:700;text-shadow:0 0 1px #0004">yellow</span> key ideas · <span style="color:var(--green);font-weight:700">green</span> notes from the lecture. Cells labelled <em>extra</em> aren't in the notebook; they're added to explain something.</p></div></div>
+  </div>
+
+  <div class="sec-title"><h2>Scratchpad</h2><span class="c2">a free cell — try anything</span></div>
+  <div class="cell" data-label="scratchpad — edit me and press run"><pre class="py">import sys
+print("Python", sys.version.split()[0], "is running in your browser")
+
+squares = [n * n for n in range(10)]
+squares</pre>
+  <pre class="o">Python 3.12.1 is running in your browser
+[0, 1, 4, 9, 16, 25, 36, 49, 64, 81]</pre></div>
+</div>
+
+<script>
+document.addEventListener('ds:ready', () => {
+  const S = window.DS_STORE, visited = S.get('visited', {}), quiz = S.get('quiz', {});
+  document.querySelectorAll('.lec[data-id]').forEach(card => {
+    const id = card.dataset.id, q = quiz[id], el = card.querySelector('.prog');
+    if (id === 'ref') { el.innerHTML = visited[id] ? '<b>✓</b> opened' : 'not opened yet'; return; }
+    el.innerHTML = (visited[id] ? '<b>✓</b> opened' : 'not opened yet') + ' · ' + (q ? `quiz <b>${q.right}/${q.total}</b>` : 'quiz not done');
+  });
+});
+</script>
+</body>
+</html>

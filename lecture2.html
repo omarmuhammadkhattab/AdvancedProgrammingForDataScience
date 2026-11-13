@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L2 · Object-Oriented Programming — DS588</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/site.js"></script>
+</head>
+<body data-page="l2">
+
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="eyebrow">lecture 2 <b>·</b> object-oriented programming</div>
+      <h1>Classes are <span class="u">blueprints</span>, objects are the houses.</h1>
+      <p class="lead">How to bundle data and behaviour into your own types: defining a class, <code>__init__</code> and <code>self</code>, instance vs class attributes, reaching attributes by name with <code>getattr</code>, and the three pillars — inheritance, polymorphism and encapsulation — plus a first look at metaclasses. Every cell is from the lecture notebook, in the same order, and runs live.</p>
+      <div class="tags"><span>class</span><span>__init__</span><span>self</span><span>class attribute</span><span>getattr</span><span>inheritance</span><span>polymorphism</span><span>_protected</span><span>__private</span><span>type</span></div>
+      <div class="meta"><span><b>Sources:</b> DS588 Lecture 2.pdf · OOP lecture.ipynb</span><span><b>Video:</b> Lecture 2</span></div>
+    </div>
+    <div class="repl" aria-hidden="true"><span class="p">&gt;&gt;&gt;</span> p1 = Person("Ahmed", 25, "Giza")<br><span class="p">&gt;&gt;&gt;</span> p1.name<br><span class="o">'Ahmed'</span><br><span class="p">&gt;&gt;&gt;</span> type(p1)<br><span class="o">__main__.Person</span><br><span class="p">&gt;&gt;&gt;</span> type(Person)<br><span class="o">type</span><br><span class="p">&gt;&gt;&gt;</span> <span class="cursor"></span></div>
+  </div>
+</header>
+
+<div class="page">
+<main class="content">
+
+<section class="section" id="s-oop">
+  <div class="sec-head"><span class="sec-num">2.1</span><h2>What is object-oriented programming?</h2></div>
+  <p><strong>Object-oriented programming (OOP)</strong> structures a program by bundling related <strong>properties</strong> (data) and <strong>behaviours</strong> (functions) into individual <strong>objects</strong>. The lecture's two examples:</p>
+  <div class="grid">
+    <div class="obj"><div class="ty">class <b>Person</b></div><div class="bd"><p><strong>Properties:</strong> name, age, address</p><p><strong>Behaviours:</strong> walking, talking, breathing, running</p></div></div>
+    <div class="obj"><div class="ty">class <b>Email</b></div><div class="bd"><p><strong>Properties:</strong> recipients, subject, body</p><p><strong>Behaviours:</strong> adding attachments, sending</p></div></div>
+  </div>
+  <div class="table-wrap"><table class="t">
+    <tr><th>Word</th><th>Meaning</th><th>Analogy</th></tr>
+    <tr><td><strong>class</strong></td><td>a special data type that defines how to build a certain kind of object</td><td>the blueprint of a house</td></tr>
+    <tr><td><strong>instance / object</strong></td><td>an object created from the class, following its definition</td><td>an actual house built from the blueprint</td></tr>
+    <tr><td><strong>attribute</strong></td><td>data stored in an object (<code>name</code>, <code>age</code>)</td><td>the colour of this particular house</td></tr>
+    <tr><td><strong>method</strong></td><td>a function defined inside a class</td><td>"open the door" — something every house can do</td></tr>
+  </table></div>
+  <div class="note plain"><div class="lbl">In plain English</div><p>You already use objects all the time: <code>"hello".upper()</code> calls the <code>upper</code> method of a <code>str</code> object, and <code>[1, 2].append(3)</code> calls a method of a <code>list</code> object. A class lets you invent your <em>own</em> types like that.</p></div>
+</section>
+
+<section class="section" id="s-class">
+  <div class="sec-head"><span class="sec-num">2.2</span><h2>Defining a class and creating objects</h2></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>The lecturer's framing: Python already gives you data types such as <code>int</code> (whole numbers), <code>float</code> (decimals) and <code>str</code> (text). A class lets you create a <strong>new data type</strong> when none of those fits, such as <code>Student</code> or <code>Book</code>. A <code>Book</code> class says every book has a title, an author, a price and a publication year. One instance is a particular book, for example “Introduction to Programming”, published in 2010.</p><p>Methods describe behaviour: a class for a robot or a self-driving car could have methods to turn left or right, or to brake under certain conditions.</p></div>
+  <div class="cell" data-label="OOP lecture.ipynb — define a class"><pre class="py">class Person:
+    def __init__(self, name, age, address):
+        self.name = name
+        self.age = age
+        self.address = address</pre></div>
+  <ul>
+    <li><code>class Person:</code> starts the class. Everything indented below belongs to it.</li>
+    <li><code>__init__</code> is the <strong>constructor</strong>: Python calls it automatically every time a new <code>Person</code> is created, to set up the new object's data.</li>
+    <li><code>self</code> is the object being created. <code>self.name = name</code> stores the value of the argument <code>name</code> as an attribute <em>on this object</em>.</li>
+  </ul>
+  <p>To create an object, call the class like a function. The arguments go to <code>__init__</code>:</p>
+  <div class="cell" data-label="instantiate"><pre class="py">p1 = Person("Ahmed", 25, "Giza")</pre></div>
+  <div class="cell" data-label="what does the object look like?"><pre class="py">p1</pre>
+  <pre class="o" data-out="expr">&lt;__main__.Person object at 0xc04e28&gt;</pre></div>
+  <p>Printing the object itself isn't very helpful yet: it shows the class and its <strong>memory address</strong> (where it lives). In Lecture 3 we'll teach it to print itself nicely with <code>__str__</code> and <code>__repr__</code>. Its attributes are reached with a dot:</p>
+  <div class="cell" data-label="attribute access"><pre class="py">p1.name</pre>
+  <pre class="o" data-out="expr">'Ahmed'</pre></div>
+  <div class="cell"><pre class="py">p1.age</pre>
+  <pre class="o" data-out="expr">25</pre></div>
+  <div class="cell" data-label="the object's type is our class"><pre class="py">type(p1)</pre>
+  <pre class="o" data-out="expr">__main__.Person</pre></div>
+  <div class="cell" data-label="compare with a built-in type"><pre class="py">x = 100
+type(x)</pre>
+  <pre class="o" data-out="expr">int</pre></div>
+  <p><code>type(p1)</code> is <code>Person</code>, just like <code>type(100)</code> is <code>int</code>: our class is a type, exactly as real as the built-in ones.</p>
+</section>
+
+<section class="section" id="s-init">
+  <div class="sec-head"><span class="sec-num">2.3</span><h2><code>__init__</code>, default values and <code>self</code></h2></div>
+  <p>Like any function, <code>__init__</code> can give arguments <strong>default values</strong>, which makes them optional when creating an object:</p>
+  <div class="cell" data-label="defaults make arguments optional"><pre class="py">class Person:
+    def __init__(self, name, age=25, address="Giza"):
+        self.name = name
+        self.age = age
+        self.address = address</pre></div>
+  <div class="cell"><pre class="py">p2 = Person("Salma")</pre></div>
+  <div class="cell" data-label="age wasn't given, so the default is used"><pre class="py">p2.age</pre>
+  <pre class="o" data-out="expr">25</pre></div>
+  <div class="cell"><pre class="py">p2.address</pre>
+  <pre class="o" data-out="expr">'Giza'</pre></div>
+  <div class="cell" data-label="give only some arguments"><pre class="py">p3 = Person("Mohmed", 23)</pre></div>
+  <div class="cell"><pre class="py">p3.address</pre>
+  <pre class="o" data-out="expr">'Giza'</pre></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>Give a default only where one makes sense. A default address like Giza is fine, and so is a default player name in a game. But a name on an official record should <strong>not</strong> have a default: leaving it out should raise an error so the user has to enter it. Python also doesn't let you declare the argument's type (number or string?). Checking the input is done separately, with error handling, later in the course.</p></div>
+  <h3>About <code>self</code></h3>
+  <ul>
+    <li>The first parameter of every method is a reference to the <strong>current instance</strong>. By convention it's called <code>self</code> (it's like <code>this</code> in Java or C++).</li>
+    <li>In <code>__init__</code>, <code>self</code> is the object being created; in other methods, it's the object whose method was called.</li>
+    <li>You write <code>self</code> when <em>defining</em> a method, but you <strong>don't pass it</strong> when <em>calling</em> it: <code>p1.display()</code> really runs <code>Person.display(p1)</code>.</li>
+  </ul>
+  <div class="note lec"><div class="lbl">In the lecture</div><p><code>self</code> is the same idea as <code>this</code> in Java or C++. It isn't a keyword: any name for the first parameter would work, but everyone agrees to call it <code>self</code>, so use that to keep your code readable.</p></div>
+  <div class="cell" data-label="extra — the method call and the function call are the same thing"><pre class="py">class Greeter:
+    def __init__(self, name):
+        self.name = name
+    def hello(self, other):
+        return f"{self.name} says hi to {other}"
+
+g = Greeter("Salma")
+print(g.hello("Omar"))
+print(Greeter.hello(g, "Omar"))   # exactly what Python does behind the scenes</pre>
+  <pre class="o">Salma says hi to Omar
+Salma says hi to Omar</pre></div>
+  <h3>No need to "free" objects</h3>
+  <p>When you're done with an object you don't delete it yourself: Python has <strong>automatic garbage collection</strong>. It counts how many names point at each object; when none are left, the memory is freed. (The slide says there's no destructor; strictly there is a <code>__del__</code> method, but you almost never need it and you can't rely on exactly when it runs.)</p>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>Languages like C++ have a <strong>constructor</strong> that builds the object and a <strong>destructor</strong> that removes it from memory. Python doesn't need the destructor. It keeps a reference count for each object: every time your code uses it the count goes up, and every time a use ends it goes down. When nothing refers to the object any more, it's deleted from memory automatically.</p></div>
+  <div class="cell" data-label="extra — references, and what del really does"><pre class="py">import sys
+
+a = Person("Mona")
+b = a                       # a second name for the same object
+print(sys.getrefcount(a))   # references (the count includes a temporary one used by getrefcount)
+del a                       # removes the NAME a, not the object
+print(b.name)               # the object is still alive through b</pre>
+  <pre class="o">3
+Mona</pre></div>
+</section>
+
+<section class="section" id="s-attr">
+  <div class="sec-head"><span class="sec-num">2.4</span><h2>Instance attributes vs class attributes</h2></div>
+  <div class="grid">
+    <div class="obj"><div class="ty">data / <b>instance</b> attribute</div><div class="bd"><p>Owned by one particular object; each instance has its own value. Created in <code>__init__</code> with <code>self.x = …</code>. The most common kind.</p></div></div>
+    <div class="obj"><div class="ty"><b>class</b> attribute</div><div class="bd"><p>Owned by the class as a whole and <strong>shared by all instances</strong> ("static" variables in other languages). Defined inside the class but outside any method. Classic use: counting how many instances were made.</p></div></div>
+  </div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>The lecturer's analogy: a <strong>class attribute</strong> is like a shared file on Google Drive. Everyone works on the same file, so when one person edits it, everybody sees the change. A <strong>data attribute</strong> is like each person's own copy on their laptop: your edits change only your copy. The classic use of a class attribute is a counter of how many students, books or people have been created.</p></div>
+  <div class="cell" data-label="a class attribute that counts instances"><pre class="py">class Person:
+    number_of_person = 0
+    def __init__(self, name, age=25, address="Giza"):
+        self.name = name
+        self.age = age
+        self.address = address
+        Person.number_of_person += 1</pre></div>
+  <div class="cell"><pre class="py">p1 = Person("Ahmed")</pre></div>
+  <div class="cell"><pre class="py">p1.number_of_person</pre>
+  <pre class="o" data-out="expr">1</pre></div>
+  <div class="cell"><pre class="py">p2 = Person("Mohmed")</pre></div>
+  <div class="cell" data-label="p1 sees the new value too — it's shared"><pre class="py">p1.number_of_person</pre>
+  <pre class="o" data-out="expr">2</pre></div>
+  <div class="cell"><pre class="py">p2.number_of_person</pre>
+  <pre class="o" data-out="expr">2</pre></div>
+  <div class="cell" data-label="read it from the class itself"><pre class="py">Person.number_of_person</pre>
+  <pre class="o" data-out="expr">2</pre></div>
+  <p>Notice <code>Person.number_of_person += 1</code> in <code>__init__</code>: it updates the attribute <strong>on the class</strong>. That's essential, as the lab below shows.</p>
+  <div class="cell" data-label="both kinds side by side"><pre class="py">class My_Counter:
+    overall_total = 0
+    def __init__(self):
+        self.my_total = 0
+    def increment(self):
+        self.my_total += 1
+        My_Counter.overall_total += 1</pre></div>
+  <div class="cell"><pre class="py">a = My_Counter()
+b = My_Counter()
+a.increment()
+b.increment()
+b.increment()
+b.increment()</pre></div>
+  <div class="cell" data-label="shared: 1 + 3 increments"><pre class="py">My_Counter.overall_total</pre>
+  <pre class="o" data-out="expr">4</pre></div>
+  <div class="cell" data-label="a's own count"><pre class="py">a.my_total</pre>
+  <pre class="o" data-out="expr">1</pre></div>
+  <div class="cell" data-label="b's own count"><pre class="py">b.my_total</pre>
+  <pre class="o" data-out="expr">3</pre></div>
+  <div class="cell" data-label="from the class — where each attribute is stored"><pre class="py">print(vars(a))    # a stores only its own my_total
+print(vars(b))
+print(My_Counter.__dict__["overall_total"])   # overall_total is stored once, on the class</pre>
+  <pre class="o">{'my_total': 1}
+{'my_total': 3}
+4</pre></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>In class this was shown with <code>id()</code>, which gives the memory address: <code>a.overall_total</code> and <code>b.overall_total</code> have the same address (one shared variable), while <code>a.my_total</code> and <code>b.my_total</code> live at different addresses (one copy per object).</p></div>
+  <div class="lab" id="lab-attr">
+    <div class="lab-head"><span class="badge">see it</span><span class="title">Where does an attribute live? (and the shadowing trap)</span></div>
+    <div class="lab-body">
+      <div class="row"><button class="btn" data-op="new">c = My_Counter()</button><button class="btn" data-op="inc">pick object → .increment()</button><button class="btn" data-op="shadow">⚠ obj.overall_total = 100</button><button class="btn" data-op="reset">reset</button></div>
+      <div class="row small"><span class="muted">selected object:</span><span class="seg" id="attr-pick"></span></div>
+      <svg class="dia" id="attr-svg" viewBox="0 0 640 260"></svg>
+      <div class="explain" id="attr-exp"></div>
+    </div>
+  </div>
+  <div class="note trap"><div class="lbl">Common trap</div><p>Reading <code>obj.overall_total</code> finds the class attribute. But <strong>assigning</strong> <code>obj.overall_total = 100</code> does not change the class attribute — it creates a new <em>instance</em> attribute on that one object that hides ("shadows") the shared one. To change the shared value, always write <code>ClassName.attribute = …</code>.</p></div>
+</section>
+
+<section class="section" id="s-access">
+  <div class="sec-head"><span class="sec-num">2.5</span><h2>Accessing attributes and methods by name</h2></div>
+  <p>Asking for an attribute that doesn't exist raises an <code>AttributeError</code>:</p>
+  <div class="cell" data-label="no such attribute"><pre class="py">p1.course</pre>
+  <pre class="o err">AttributeError: 'Person' object has no attribute 'course'</pre></div>
+  <p>Sometimes the name of the attribute you want is only known <strong>at run time</strong> — it comes from user input, a file, or a column name in a dataset. For that Python has built-in functions that take the name as a <strong>string</strong>:</p>
+  <div class="cell" data-label="does it exist?"><pre class="py">hasattr(p1, "email")</pre>
+  <pre class="o" data-out="expr">False</pre></div>
+  <div class="cell"><pre class="py">hasattr(p1, "name")</pre>
+  <pre class="o" data-out="expr">True</pre></div>
+  <div class="cell" data-label="get an attribute by its name"><pre class="py">getattr(p1, "name")</pre>
+  <pre class="o" data-out="expr">'Ahmed'</pre></div>
+  <div class="cell"><pre class="py">getattr(p2, "age")</pre>
+  <pre class="o" data-out="expr">25</pre></div>
+  <div class="cell" data-label="getattr returns the method itself — add () to call it"><pre class="py">getattr(a, "increment")()</pre></div>
+  <div class="cell" data-label="extra — a safe default, and setattr"><pre class="py">print(getattr(p1, "email", "no email"))   # third argument = value if missing
+setattr(p1, "email", "ahmed@mail.com")     # create or change an attribute by name
+print(p1.email)
+for field in ["name", "age", "email"]:      # loop over attribute names
+    print(field, "=", getattr(p1, field))</pre>
+  <pre class="o">no email
+ahmed@mail.com
+name = Ahmed
+age = 25
+email = ahmed@mail.com</pre></div>
+  <p>A question from class: can a method create a new attribute? Yes. Any <code>self.something = …</code> inside a method adds it to the object, just like in <code>__init__</code>:</p>
+  <div class="cell" data-label="from the class — a method that adds an attribute"><pre class="py">class Person:
+    def __init__(self, name):
+        self.name = name
+    def set_course(self, course):
+        self.course = course          # a new attribute, created when the method runs
+        temp = course.upper()         # no self: a local variable, gone when the method ends
+
+b1 = Person("Ahmed")
+print(hasattr(b1, "course"))
+b1.set_course("DS588")
+print(hasattr(b1, "course"), b1.course)
+print(hasattr(b1, "temp"))</pre>
+  <pre class="o">False
+True DS588
+False</pre></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>The difference the lecturer pointed out: a variable inside a method <em>without</em> <code>self</code> is an ordinary local variable that disappears when the method ends. An attribute set with <code>self.</code> belongs to the object and stays until the object itself is removed from memory.</p></div>
+</section>
+
+<section class="section" id="s-inherit">
+  <div class="sec-head"><span class="sec-num">2.6</span><h2>Inheritance</h2></div>
+  <p><strong>Inheritance</strong> lets one class take on the properties and methods of another. The class that inherits is the <strong>child</strong> (derived) class; the one it inherits from is the <strong>parent</strong> (base) class. Benefits from the lecture: it models real-world "is-a" relationships (a teacher <em>is a</em> person), it <strong>reuses</strong> code, and it lets you add features to a class without modifying it.</p>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>Examples from class: a <code>Computer</code> class whose children are laptop, desktop, mobile and tablet. A <code>Person</code> (name, national ID) whose children include <code>Employee</code> (adds a salary) and <code>Student</code> (adds a grade and a school). The child gets everything from the parent and adds its own features, without touching the parent's code.</p><p>Inheritance can also be <strong>multi-level</strong> (grandparent → parent → child) or <strong>multiple</strong> (one class inheriting from several). The course covers only the single-level case; search “multilevel inheritance” and “multiple inheritance” if you want to go further.</p></div>
+  <div class="cell" data-label="the parent class gets a method"><pre class="py">class Person:
+    number_of_person = 0
+    def __init__(self, name, age=25, address="Giza"):
+        self.name = name
+        self.age = age
+        self.address = address
+        Person.number_of_person += 1
+    def display(self):
+        print(self.name)</pre></div>
+  <div class="cell" data-label="Teacher inherits from Person"><pre class="py">class Teacher(Person):
+    def __init__(self, name, number_of_courses):
+        Person.__init__(self, name)
+        self.number_of_courses = number_of_courses
+    def display(self):
+        Person.display(self)
+        print(self.number_of_courses)</pre></div>
+  <ul>
+    <li><code>class Teacher(Person):</code> — the parent goes in brackets.</li>
+    <li><code>Person.__init__(self, name)</code> runs the parent's constructor first, so the teacher also gets <code>name</code>, <code>age</code> and <code>address</code>.</li>
+    <li>Teacher defines its own <code>display</code>, which <strong>overrides</strong> the parent's; inside it, <code>Person.display(self)</code> reuses the parent version and then adds the course count.</li>
+  </ul>
+  <div class="cell"><pre class="py">t1 = Teacher("Ahmed", 3)</pre></div>
+  <div class="cell"><pre class="py">t1.display()</pre>
+  <pre class="o">Ahmed
+3</pre></div>
+  <div class="cell" data-label="extra — the modern way to call the parent: super()"><pre class="py">class Student(Person):
+    def __init__(self, name, gpa):
+        super().__init__(name)        # same as Person.__init__(self, name)
+        self.gpa = gpa
+
+s = Student("Omar", 3.7)
+print(s.name, s.age, s.gpa)
+print(isinstance(s, Person), issubclass(Student, Person))
+print(Student.__mro__)                # the order Python searches for methods</pre>
+  <pre class="o">Omar 25 3.7
+True True
+(&lt;class '__main__.Student'&gt;, &lt;class '__main__.Person'&gt;, &lt;class 'object'&gt;)</pre></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>When does the child need its own <code>__init__</code>? Only if it sets up something extra. If the child has no <code>__init__</code>, the parent's is used as is. If it defines one, that replaces the parent's, so call the parent's first (<code>Person.__init__(self, …)</code> or <code>super().__init__(…)</code>) and then add the new attributes. Another option shown in class: leave <code>__init__</code> alone and add a method such as <code>set_number_of_classes(self, n)</code> to the child.</p></div>
+  <div class="lab" id="lab-mro">
+    <div class="lab-head"><span class="badge">see it</span><span class="title">How Python finds a method: the lookup chain</span></div>
+    <div class="lab-body">
+      <div class="row"><span class="muted small">call on <code>t1</code>:</span><span id="mro-btns" style="display:flex;flex-wrap:wrap;gap:.4rem"><button class="btn on" data-m="display">t1.display()</button><button class="btn" data-m="name">t1.name</button><button class="btn" data-m="number_of_person">t1.number_of_person</button><button class="btn" data-m="fly">t1.fly()</button></span></div>
+      <svg class="dia" id="mro-svg" viewBox="0 0 640 230"></svg>
+      <div class="explain" id="mro-exp"></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="s-poly">
+  <div class="sec-head"><span class="sec-num">2.7</span><h2>Polymorphism</h2></div>
+  <p><strong>Polymorphism</strong> means "many forms": the <strong>same method name</strong> does the right thing for different types. You write one loop, and each object responds in its own way.</p>
+  <div class="cell" data-label="one method name, many behaviours"><pre class="py">class Animal:
+    def speak(self):
+        pass
+
+class Cat(Animal):
+    def speak(self):
+        return "Meow!"
+
+class Dog(Animal):
+    def speak(self):
+        return "Woof!"</pre></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p><code>pass</code> means “do nothing”. It's used when a method must exist but its body isn't known yet: <code>Animal</code> can't know what sound to make, so each subclass fills it in. You'll also see <code>pass</code> in assignment templates as a placeholder where your code goes.</p></div>
+  <div class="cell"><pre class="py">animals = [Cat(), Dog(), Cat()]</pre></div>
+  <div class="cell" data-label="the loop doesn't care which animal it has"><pre class="py">for a in animals:
+    print(a.speak())</pre>
+  <pre class="o">Meow!
+Woof!
+Meow!</pre></div>
+  <p>The slide defines polymorphism as the same function name with different signatures (different argument types or numbers). Python does this all the time with built-ins:</p>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>A second example from class: a <code>calculate_area</code> method that takes a radius for a circle and a side length for a square, so the same name does a different calculation. Note that, unlike Java, Python can't have two methods with the same name in one class that differ only by argument types: the second definition simply replaces the first.</p></div>
+  <div class="cell" data-label="extra — built-in polymorphism"><pre class="py">print(len("hello"), len([1, 2, 3]), len({"a": 1}))   # len works on many types
+print(2 + 3, "2" + "3", [2] + [3])                    # + means add, join, or concatenate</pre>
+  <pre class="o">5 3 1
+5 23 [2, 3]</pre></div>
+  <div class="note key"><div class="lbl">Duck typing</div><p>Python doesn't even need a shared parent class: any object with a <code>speak()</code> method would work in that loop. "If it walks like a duck and quacks like a duck, it's a duck."</p></div>
+</section>
+
+<section class="section" id="s-object">
+  <div class="sec-head"><span class="sec-num">2.8</span><h2>Everything is an object — even classes</h2></div>
+  <div class="cell"><pre class="py">type(t1)</pre>
+  <pre class="o" data-out="expr">__main__.Teacher</pre></div>
+  <div class="cell" data-label="what is the type of a class?"><pre class="py">type(Teacher)</pre>
+  <pre class="o" data-out="expr">type</pre></div>
+  <div class="cell"><pre class="py">type(Person)</pre>
+  <pre class="o" data-out="expr">type</pre></div>
+  <div class="cell" data-label="and the type of type is… type"><pre class="py">type(type)</pre>
+  <pre class="o" data-out="expr">type</pre></div>
+  <p><code>t1</code> is an instance of <code>Teacher</code>. But <code>Teacher</code> itself is an object too — an instance of <code>type</code>. A class that creates classes is called a <strong>metaclass</strong>, and <code>type</code> is Python's default one. <code>type(type)</code> is <code>type</code>: the chain ends with itself. Section 2.10 and Lecture 3 build on this.</p>
+</section>
+
+<section class="section" id="s-encap">
+  <div class="sec-head"><span class="sec-num">2.9</span><h2>Encapsulation: protected and private</h2></div>
+  <p><strong>Encapsulation</strong> restricts direct access to an object's data, to prevent accidental changes: ideally the data is changed only through the object's own methods. Python signals this with name prefixes:</p>
+  <div class="table-wrap"><table class="t">
+    <tr><th>Prefix</th><th>Meaning</th><th>What Python actually does</th></tr>
+    <tr><td class="mono">name</td><td>public</td><td>anyone can read and change it</td></tr>
+    <tr><td class="mono">_name</td><td>protected — "internal, please don't touch from outside"</td><td>nothing: it's only a convention</td></tr>
+    <tr><td class="mono">__name</td><td>private</td><td>renames it to <code>_ClassName__name</code> (<strong>name mangling</strong>) so it can't be reached by its plain name from outside</td></tr>
+  </table></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>The lecturer's company example: anyone may know an employee's <strong>name</strong> (public). The <strong>project</strong> they work on should be known to them and the people under them, i.e. the class and its subclasses (protected, <code>_project</code>). The <strong>salary</strong> should be known only to the employee (private, <code>__salary</code>).</p></div>
+  <div class="cell" data-label="public, protected and private attributes"><pre class="py">class Employee:
+    def __init__(self, name, project, salary):
+        self.name = name
+        self._project = project
+        self.__salary = salary</pre></div>
+  <div class="cell" data-label="a subclass that tries to edit them"><pre class="py">class subEmplyee(Employee):
+    def edit(self, name, project, salary):
+        self.name = name
+        self._project = project
+        print("After modification: ", self.name, self._project)
+        Employee.__salary = salary
+        print(Employee.__salary)</pre></div>
+  <div class="cell"><pre class="py">e1 = Employee("Ahmed", "P2", 12000)</pre></div>
+  <div class="cell"><pre class="py">se1 = subEmplyee("Mohmed", "p2", 12344)</pre></div>
+  <div class="cell"><pre class="py">se1.edit("DASF", "DASF", 1236575)</pre>
+  <pre class="o">After modification:  DASF DASF
+1236575</pre></div>
+  <div class="cell" data-label="protected: still reachable (it's a convention)"><pre class="py">e1._project</pre>
+  <pre class="o" data-out="expr">'P2'</pre></div>
+  <div class="cell"><pre class="py">e1.name</pre>
+  <pre class="o" data-out="expr">'Ahmed'</pre></div>
+  <div class="cell" data-label="private: not reachable by its plain name"><pre class="py">e1.__salary</pre>
+  <pre class="o err">AttributeError: 'Employee' object has no attribute '__salary'</pre></div>
+  <p>So where did the salary go? Look inside the object:</p>
+  <div class="cell" data-label="extra — name mangling revealed"><pre class="py">print(e1.__dict__)
+print(e1._Employee__salary)     # the mangled name works: "private" is a strong hint, not a lock</pre>
+  <pre class="o">{'name': 'Ahmed', '_project': 'P2', '_Employee__salary': 12000}
+12000</pre></div>
+  <div class="note trap"><div class="lbl">Look closely at <code>edit()</code></div><p>It <em>looks</em> as if <code>edit</code> changed the salary to 1236575. It didn't. Inside <code>class subEmplyee</code>, the name <code>__salary</code> is mangled using <em>that</em> class's name, so <code>Employee.__salary = salary</code> actually creates a brand-new <strong>class attribute</strong> <code>Employee._subEmplyee__salary</code>. The employee's real private salary, <code>_Employee__salary</code>, is untouched:</p></div>
+  <div class="cell" data-label="extra — proof: the real salary never changed"><pre class="py">print(se1._Employee__salary)                          # still the original 12344
+print([k for k in vars(Employee) if "salary" in k])   # the accidental new class attribute</pre>
+  <pre class="o">12344
+['_subEmplyee__salary']</pre></div>
+  <p>That's encapsulation working as designed: a subclass can't silently rewrite its parent's private data. The proper way is for the class that owns the data to offer a method:</p>
+  <div class="cell" data-label="extra — the encapsulated way: methods (or a property) on the owning class"><pre class="py">class Employee:
+    def __init__(self, name, project, salary):
+        self.name = name
+        self._project = project
+        self.__salary = salary
+
+    def get_salary(self):
+        return self.__salary
+
+    def set_salary(self, value):
+        if value &lt; 0:
+            raise ValueError("salary can't be negative")
+        self.__salary = value
+
+e2 = Employee("Salma", "P3", 15000)
+e2.set_salary(16000)
+print(e2.get_salary())
+e2.set_salary(-5)</pre>
+  <pre class="o err">16000
+ValueError: salary can't be negative</pre></div>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>“In Python almost everything is public in the end.” The underscores are an agreed convention that tells anyone reading your code what not to touch. As shown in class, the private value is still reachable from outside as <code>object._ClassName__attribute</code>.</p></div>
+  <div class="lab" id="lab-mangle">
+    <div class="lab-head"><span class="badge">try it</span><span class="title">Name-mangling calculator</span></div>
+    <div class="lab-body">
+      <div class="row"><span class="small muted">inside class</span><input class="txt" id="mg-cls" value="subEmplyee" style="width:150px"><span class="small muted">the code writes</span><input class="txt" id="mg-attr" value="__salary" style="width:130px"></div>
+      <div class="explain" id="mg-out"></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="s-meta">
+  <div class="sec-head"><span class="sec-num">2.10</span><h2>Metaclasses: a first look</h2></div>
+  <p>The lecture closes with the idea that ties everything together:</p>
+  <ol class="steps">
+    <li>A <strong>class</strong> is a blueprint for an object.</li>
+    <li>An <strong>object</strong> is an actual instance of what that blueprint defines.</li>
+    <li>A <strong>metaclass</strong> is a class whose instances are <em>classes</em>: it is the blueprint for blueprints. Python's built-in metaclass is <code>type</code>.</li>
+  </ol>
+  <div class="note lec"><div class="lbl">In the lecture</div><p>The lecturer's advice before Lecture 3: review this lecture's OOP ideas well — classes, inheritance and encapsulation — because metaclasses, decorators and generators build directly on them.</p></div>
+  <div class="cell" data-label="extra — the three levels"><pre class="py">print(type(t1))         # object  -> made by the class Teacher
+print(type(Teacher))    # class   -> made by the metaclass type
+print(type(type))       # type    -> made by itself</pre>
+  <pre class="o">&lt;class '__main__.Teacher'&gt;
+&lt;class 'type'&gt;
+&lt;class 'type'&gt;</pre></div>
+  <p>Lecture 3 shows how to build classes with <code>type()</code> directly and how to write your own metaclass.</p>
+</section>
+
+<section class="section" id="s-quiz">
+  <div class="sec-head"><span class="sec-num">✓</span><h2>Check yourself</h2></div>
+  <div class="quiz" data-id="l2">
+    <div class="quiz-top"><h3>Lecture 2 quiz</h3><span class="quiz-score"></span></div>
+    <div class="q" data-a="1"><div class="q-text">What does <code>__init__</code> do?</div>
+      <div class="q-opts"><button class="q-opt">Deletes the object</button><button class="q-opt">Initialises a new object's attributes; Python calls it automatically on creation</button><button class="q-opt">Imports the class</button><button class="q-opt">Prints the object</button></div>
+      <div class="q-fb">It's the constructor: <code>Person("Ahmed")</code> creates the object and passes the arguments to <code>__init__</code>.</div></div>
+    <div class="q" data-a="2"><div class="q-text">Why don't you pass <code>self</code> when calling <code>p1.display()</code>?</div>
+      <div class="q-opts"><button class="q-opt">Because display has no parameters</button><button class="q-opt">You must — it's an error otherwise</button><button class="q-opt">Python passes the object automatically: <code>p1.display()</code> runs <code>Person.display(p1)</code></button><button class="q-opt">self is a global variable</button></div>
+      <div class="q-fb">The object before the dot becomes <code>self</code>.</div></div>
+    <div class="q" data-a="0"><div class="q-text">Three <code>My_Counter</code> objects each call <code>increment()</code> twice. What is <code>My_Counter.overall_total</code>?</div>
+      <div class="q-opts"><button class="q-opt">6</button><button class="q-opt">2</button><button class="q-opt">3</button><button class="q-opt">0</button></div>
+      <div class="q-fb">It's a class attribute shared by all instances: 3 × 2 = 6. Each object's own <code>my_total</code> is 2.</div></div>
+    <div class="q" data-a="3"><div class="q-text">What does <code>c.overall_total = 100</code> do (c is a My_Counter object)?</div>
+      <div class="q-opts"><button class="q-opt">Changes the shared class attribute for everyone</button><button class="q-opt">Raises an AttributeError</button><button class="q-opt">Deletes the class attribute</button><button class="q-opt">Creates an instance attribute on c that shadows the class attribute</button></div>
+      <div class="q-fb">Assignment through an instance creates an instance attribute. Use <code>My_Counter.overall_total = …</code> to change the shared one.</div></div>
+    <div class="q" data-a="1"><div class="q-text">The attribute name you need is in a variable <code>field = "age"</code>. How do you read it from <code>p1</code>?</div>
+      <div class="q-opts"><button class="q-opt"><code>p1.field</code></button><button class="q-opt"><code>getattr(p1, field)</code></button><button class="q-opt"><code>p1["age"]</code></button><button class="q-opt"><code>hasattr(p1, field)</code></button></div>
+      <div class="q-fb"><code>p1.field</code> looks for an attribute literally called "field". <code>getattr</code> takes the name as a string; <code>hasattr</code> only answers True/False.</div></div>
+    <div class="q" data-a="2"><div class="q-text">In <code>class Teacher(Person)</code>, Teacher defines <code>display()</code> and so does Person. What runs for <code>t1.display()</code>?</div>
+      <div class="q-opts"><button class="q-opt">Person's version</button><button class="q-opt">Both, parent first, automatically</button><button class="q-opt">Teacher's version (it overrides the parent's)</button><button class="q-opt">An error: two methods with one name</button></div>
+      <div class="q-fb">Python searches the child class first. The lecture's Teacher.display calls <code>Person.display(self)</code> explicitly to reuse the parent's code.</div></div>
+    <div class="q" data-a="0"><div class="q-text">After <code>self.__salary = 12000</code> inside <code>class Employee</code>, what is the attribute's real name?</div>
+      <div class="q-opts"><button class="q-opt"><code>_Employee__salary</code></button><button class="q-opt"><code>__salary</code></button><button class="q-opt"><code>salary</code></button><button class="q-opt"><code>Employee.salary</code></button></div>
+      <div class="q-fb">Name mangling adds <code>_ClassName</code> in front, which is why <code>e1.__salary</code> fails from outside.</div></div>
+    <div class="q" data-a="3"><div class="q-text">What is <code>type(Person)</code>?</div>
+      <div class="q-opts"><button class="q-opt"><code>Person</code></button><button class="q-opt"><code>object</code></button><button class="q-opt"><code>class</code></button><button class="q-opt"><code>type</code> — classes are instances of the metaclass type</button></div>
+      <div class="q-fb">Objects are instances of classes; classes are instances of <code>type</code>.</div></div>
+    <div class="row"><button class="btn quiz-reset">↺ try again</button></div>
+  </div>
+</section>
+
+<section class="section" id="s-sum">
+  <div class="sec-head"><span class="sec-num">★</span><h2>Summary</h2></div>
+  <div class="summary"><ul>
+    <li>A <strong>class</strong> is a blueprint; calling it creates an <strong>instance</strong>. <code>__init__</code> sets up each new object; <code>self</code> is that object.</li>
+    <li><strong>Instance attributes</strong> (<code>self.x</code>) belong to one object; <strong>class attributes</strong> are shared. Change shared ones via the class name, or you'll shadow them.</li>
+    <li><code>hasattr</code> / <code>getattr</code> / <code>setattr</code> reach attributes whose names are only known at run time.</li>
+    <li><strong>Inheritance</strong>: <code>class Child(Parent)</code> reuses and overrides; call the parent with <code>Parent.__init__(self, …)</code> or <code>super().__init__(…)</code>.</li>
+    <li><strong>Polymorphism</strong>: one method name, a different behaviour per type.</li>
+    <li><strong>Encapsulation</strong>: <code>_x</code> = protected by convention, <code>__x</code> = private via name mangling (<code>_Class__x</code>). Change private data through the owning class's methods.</li>
+    <li>Everything is an object: instances are made by classes, classes by the metaclass <code>type</code>.</li>
+  </ul></div>
+</section>
+
+<div id="lec-nav"></div>
+</main>
+<aside class="toc"></aside>
+</div>
+
+<script>
+document.addEventListener('ds:ready', () => {
+  const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
+  const esc = window.DS_ESC;
+  const DEFS = '<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>';
+
+  /* ---------- instance vs class attributes ---------- */
+  (function () {
+    let objs, overall, sel, last;
+    function reset() { objs = []; overall = 0; sel = -1; last = 'Press <b>c = My_Counter()</b> to create objects.'; draw(); }
+    function draw() {
+      const svg = $('#attr-svg');
+      let h = DEFS + `<rect class="cls" x="200" y="12" width="240" height="64" rx="10"/><text x="214" y="34" style="font-weight:700">class My_Counter</text><text x="214" y="58">overall_total = ${overall}</text>`;
+      objs.forEach((o, i) => {
+        const x = 20 + i * 155, y = 150;
+        h += `<rect class="inst" x="${x}" y="${y}" width="140" height="${o.shadow !== undefined ? 84 : 62}" rx="10" style="${i === sel ? 'stroke-width:3' : ''}"/><text x="${x + 12}" y="${y + 22}" style="font-weight:700">${o.n}</text><text x="${x + 12}" y="${y + 46}">my_total = ${o.my}</text>`;
+        if (o.shadow !== undefined) h += `<text x="${x + 12}" y="${y + 70}" style="fill:var(--coral)">overall_total=${o.shadow}</text>`;
+        h += `<path class="arrow" d="M${x + 70} ${y} L ${320} 78" marker-end="url(#ah)" style="stroke-dasharray:4 3;opacity:.6"/>`;
+      });
+      if (!objs.length) h += '<text x="320" y="190" text-anchor="middle" class="muted">(no instances yet)</text>';
+      svg.innerHTML = h;
+      $('#attr-pick').innerHTML = objs.map((o, i) => `<button class="btn ${i === sel ? 'on' : ''}" data-i="${i}">${o.n}</button>`).join('') || '<span class="muted small" style="padding:.3rem .6rem">—</span>';
+      $$('#attr-pick [data-i]').forEach(b => b.addEventListener('click', () => { sel = +b.dataset.i; draw(); }));
+      const read = sel >= 0 ? objs[sel] : null;
+      $('#attr-exp').innerHTML = last + (read ? `<br>Reading <code>${read.n}.overall_total</code> now gives <b>${read.shadow !== undefined ? read.shadow + '</b> (its own shadowing attribute!)' : overall + '</b> (found on the class)'}.` : '');
+    }
+    $$('#lab-attr [data-op]').forEach(b => b.addEventListener('click', () => {
+      const op = b.dataset.op;
+      if (op === 'reset') return reset();
+      if (op === 'new') { if (objs.length >= 4) { last = 'That\'s enough objects for the picture.'; } else { objs.push({ n: 'abcd'[objs.length], my: 0 }); sel = objs.length - 1; last = `<b>${objs[sel].n} = My_Counter()</b>: a new object with its own <b>my_total = 0</b>. The dashed line means "anything I don't have, look up on my class".`; } }
+      if (op === 'inc') { if (sel < 0) last = 'Create an object first.'; else { objs[sel].my++; overall++; last = `<b>${objs[sel].n}.increment()</b>: its own <b>my_total</b> goes up, and <b>My_Counter.overall_total</b> (shared) goes up too.`; } }
+      if (op === 'shadow') { if (sel < 0) last = 'Create an object first.'; else { objs[sel].shadow = 100; last = `<b>${objs[sel].n}.overall_total = 100</b> did <i>not</i> change the class: it created a new instance attribute on <b>${objs[sel].n}</b> that hides the shared one. Other objects still see ${overall}.`; } }
+      draw();
+    }));
+    reset();
+  })();
+
+  /* ---------- method lookup chain ---------- */
+  (function () {
+    const LEVELS = [
+      { n: 't1 (instance)', has: ['name', 'age', 'address', 'number_of_courses'], cls: 'inst' },
+      { n: 'class Teacher', has: ['__init__', 'display'], cls: 'cls' },
+      { n: 'class Person', has: ['__init__', 'display', 'number_of_person'], cls: 'cls' },
+      { n: 'class object', has: ['__str__', '__repr__', '__eq__', '…'], cls: 'meta' }
+    ];
+    function draw(m) {
+      let h = DEFS, found = -1;
+      LEVELS.forEach((L, i) => { if (found < 0 && L.has.includes(m)) found = i; });
+      LEVELS.forEach((L, i) => {
+        const x = 12 + i * 158, hit = i === found, checked = found < 0 || i <= found;
+        h += `<rect class="${L.cls}" x="${x}" y="40" width="146" height="150" rx="10" style="${hit ? 'stroke:var(--coral);stroke-width:3' : ''};opacity:${checked ? 1 : .35}"/><text x="${x + 10}" y="62" style="font-weight:700">${L.n}</text>`;
+        L.has.forEach((a, k) => h += `<text x="${x + 12}" y="${88 + k * 22}" style="${a === m ? 'fill:var(--coral);font-weight:700' : ''}">${esc(a)}</text>`);
+        if (i < LEVELS.length - 1) h += `<path class="arrow ${checked && i < (found < 0 ? 9 : found) ? 'hot' : ''}" d="M${x + 146} 115 L ${x + 156} 115" marker-end="url(#ah)"/>`;
+      });
+      h += `<text x="12" y="24" class="muted">search order (Teacher.__mro__): left → right, stop at the first match</text>`;
+      $('#mro-svg').innerHTML = h;
+      const exp = {
+        display: '<b>t1.display()</b>: not on the instance → found on <b>Teacher</b>, so Teacher\'s version runs (it overrides Person\'s). Person\'s display only runs because Teacher\'s code calls it explicitly.',
+        name: '<b>t1.name</b>: found immediately on the instance itself — <code>Person.__init__</code> put it there when Teacher\'s constructor called it.',
+        number_of_person: '<b>t1.number_of_person</b>: not on the instance, not on Teacher → found on <b>Person</b> as a class attribute. Inherited for free.',
+        fly: '<b>t1.fly()</b>: searched everywhere, all the way up to <b>object</b>, and not found → <code>AttributeError: \'Teacher\' object has no attribute \'fly\'</code>.'
+      };
+      $('#mro-exp').innerHTML = exp[m];
+    }
+    $$('#mro-btns .btn').forEach(b => b.addEventListener('click', () => { $$('#mro-btns .btn').forEach(x => x.classList.toggle('on', x === b)); draw(b.dataset.m); }));
+    draw('display');
+  })();
+
+  /* ---------- name mangling ---------- */
+  (function () {
+    function upd() {
+      const c = $('#mg-cls').value.trim() || 'Employee', a = $('#mg-attr').value.trim();
+      let out;
+      if (/^__\w*[^_]_?$/.test(a) && !/__$/.test(a)) out = `Python stores <code>${esc(a)}</code> written inside <code>class ${esc(c)}</code> as <b>${esc('_' + c.replace(/^_+/, '') + a)}</b>.`;
+      else if (/^__\w+__$/.test(a)) out = `<code>${esc(a)}</code> starts <i>and ends</i> with two underscores — a "dunder" name like <code>__init__</code>. Those are <b>not</b> mangled.`;
+      else if (/^_/.test(a)) out = `<code>${esc(a)}</code> has a single underscore: <b>not mangled</b>. It's "protected" only by convention.`;
+      else out = `<code>${esc(a)}</code> is a normal public name: <b>not mangled</b>.`;
+      $('#mg-out').innerHTML = out + (c === 'subEmplyee' && a === '__salary' ? '<br>That\'s why the notebook\'s <code>Employee.__salary = salary</code> inside <code>subEmplyee</code> created <code>Employee._subEmplyee__salary</code> instead of changing <code>_Employee__salary</code>.' : '');
+    }
+    ['#mg-cls', '#mg-attr'].forEach(id => $(id).addEventListener('input', upd)); upd();
+  })();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cheat sheet — DS588</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:ital,wght@0,400;0,600;0,700;1,400&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/site.js"></script>
+<style>
+.obj pre.hl-py{font-family:var(--f-mono);font-size:.8rem;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:.55rem .75rem;overflow-x:auto;white-space:pre;margin:.4rem 0}
+.obj .from{font-family:var(--f-mono);font-size:.68rem;color:var(--muted);margin-top:.3rem}
+#ref-search{width:100%;font-size:1rem;padding:.6rem .9rem}
+.hidden{display:none !important}
+</style>
+</head>
+<body data-page="ref">
+
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="eyebrow">reference <b>·</b> lectures 1–3</div>
+      <h1>The whole course on <span class="u">one page</span>.</h1>
+      <p class="lead">Syntax and patterns from every lecture, short and searchable. Each card says which lecture it comes from, so you can jump back for the full explanation.</p>
+    </div>
+    <div class="repl" aria-hidden="true"><span class="p">&gt;&gt;&gt;</span> help(anything)<br><span class="p">&gt;&gt;&gt;</span> dir(obj)<br><span class="p">&gt;&gt;&gt;</span> type(obj)<br><span class="p">&gt;&gt;&gt;</span> <span class="cursor"></span></div>
+  </div>
+</header>
+
+<div class="page">
+<main class="content">
+  <input class="txt" id="ref-search" type="search" placeholder="Search the cheat sheet… (e.g. yield, getattr, join, __repr__)" aria-label="Search the cheat sheet">
+  <p class="small muted" id="ref-count"></p>
+
+<section class="section" id="r-speed">
+  <div class="sec-head"><span class="sec-num">L1</span><h2>Writing faster Python</h2></div>
+  <div class="grid">
+    <div class="obj"><div class="ty"><b>measure</b> first</div><div class="bd"><pre class="hl-py">import timeit
+timeit.timeit("sum(range(100))", number=10_000)
+
+import cProfile, pstats
+pr = cProfile.Profile(); pr.enable()
+main()
+pr.disable()
+pstats.Stats(pr).sort_stats("cumulative").print_stats(5)</pre><div class="from">lecture 1 · 1.3, 1.4</div></div></div>
+    <div class="obj"><div class="ty">list <b>comprehension</b></div><div class="bd"><pre class="hl-py"># instead of a loop + append
+squares = [x * x for x in nums]
+evens   = [x for x in nums if x % 2 == 0]
+lookup  = {k: v for k, v in pairs}</pre><div class="from">lecture 1 · 1.3</div></div></div>
+    <div class="obj"><div class="ty">join <b>strings</b></div><div class="bd"><pre class="hl-py"># slow: s += word in a loop
+sentence = " ".join(words)</pre><div class="from">lecture 1 · 1.3</div></div></div>
+    <div class="obj"><div class="ty">avoid <b>dot lookups</b> &amp; globals in hot loops</div><div class="bd"><pre class="hl-py">append = result.append        # look it up once
+for x in data:
+    append(x)
+# locals are faster than globals:
+def f():
+    local_len = len
+    ...</pre><div class="from">lecture 1 · 1.3</div></div></div>
+    <div class="obj"><div class="ty"><b>built-ins</b> &amp; multiple assignment</div><div class="bd"><pre class="hl-py">total = sum(nums); biggest = max(nums)
+a, b = b, a                   # swap without a temp
+import math                   # import only what you use
+from math import sqrt</pre><div class="from">lecture 1 · 1.3</div></div></div>
+    <div class="obj"><div class="ty">pick the right <b>data structure</b></div><div class="bd"><p><code>x in set</code> / <code>dict</code> → fast (hash lookup) · <code>x in list</code> → checks every item. Use a <strong>tuple</strong> for fixed data, a <strong>set</strong> for membership/uniqueness, a <strong>dict</strong> for key→value.</p><div class="from">lecture 1 · 1.3</div></div></div>
+    <div class="obj"><div class="ty"><b>vectorise</b> with NumPy</div><div class="bd"><pre class="hl-py">import numpy as np
+a = np.arange(1_000_000)
+(a * a).sum()                 # no Python loop</pre><div class="from">lecture 1 · 1.5</div></div></div>
+    <div class="obj"><div class="ty">why Python is <b>slow</b></div><div class="bd"><p><strong>Interpreted</strong> (source → bytecode → run by the PVM; see it with <code>dis.dis(f)</code>), <strong>dynamically typed</strong> (types checked at run time), and the <strong>GIL</strong> (one thread runs Python bytecode at a time; use processes for CPU-bound work).</p><div class="from">lecture 1 · 1.2</div></div></div>
+  </div>
+</section>
+
+<section class="section" id="r-class">
+  <div class="sec-head"><span class="sec-num">L2</span><h2>Classes and objects</h2></div>
+  <div class="grid">
+    <div class="obj"><div class="ty">class <b>template</b></div><div class="bd"><pre class="hl-py">class Person:
+    count = 0                         # class attribute (shared)
+    def __init__(self, name, age=25): # constructor
+        self.name = name              # instance attribute
+        self.age = age
+        Person.count += 1
+    def display(self):                # method
+        print(self.name)
+
+p = Person("Ahmed")                   # create
+p.display()                           # = Person.display(p)</pre><div class="from">lecture 2 · 2.2–2.4</div></div></div>
+    <div class="obj"><div class="ty">attributes <b>by name</b></div><div class="bd"><pre class="hl-py">hasattr(p, "email")           # True / False
+getattr(p, "name")            # p.name
+getattr(p, "email", None)     # default if missing
+setattr(p, "email", "a@b.c")  # p.email = ...
+getattr(obj, "method")()      # call a method by name
+p.__dict__                    # all instance attributes</pre><div class="from">lecture 2 · 2.5</div></div></div>
+    <div class="obj"><div class="ty"><b>inheritance</b></div><div class="bd"><pre class="hl-py">class Teacher(Person):
+    def __init__(self, name, courses):
+        super().__init__(name)   # or Person.__init__(self, name)
+        self.courses = courses
+    def display(self):           # override
+        super().display()        # reuse the parent's
+        print(self.courses)
+
+isinstance(t, Person); issubclass(Teacher, Person)
+Teacher.__mro__                  # lookup order</pre><div class="from">lecture 2 · 2.6</div></div></div>
+    <div class="obj"><div class="ty"><b>polymorphism</b></div><div class="bd"><pre class="hl-py">class Cat(Animal):
+    def speak(self): return "Meow!"
+class Dog(Animal):
+    def speak(self): return "Woof!"
+
+for a in [Cat(), Dog()]:
+    print(a.speak())             # same name, own behaviour</pre><div class="from">lecture 2 · 2.7</div></div></div>
+    <div class="obj"><div class="ty"><b>encapsulation</b></div><div class="bd"><pre class="hl-py">self.name      # public
+self._project  # protected — convention only
+self.__salary  # private — stored as _Employee__salary
+
+def get_salary(self): return self.__salary
+def set_salary(self, v):
+    if v &lt; 0: raise ValueError("negative")
+    self.__salary = v</pre><div class="from">lecture 2 · 2.9</div></div></div>
+    <div class="obj"><div class="ty">class vs instance <b>attribute trap</b></div><div class="bd"><p>Reading <code>obj.count</code> finds the class attribute; <em>assigning</em> <code>obj.count = 5</code> creates an instance attribute that hides it. Change shared data with <code>ClassName.count = …</code>.</p><div class="from">lecture 2 · 2.4</div></div></div>
+  </div>
+</section>
+
+<section class="section" id="r-special">
+  <div class="sec-head"><span class="sec-num">L3</span><h2>Special methods</h2></div>
+  <div class="grid">
+    <div class="obj"><div class="ty"><b>__str__</b>, <b>__repr__</b>, <b>__eq__</b></div><div class="bd"><pre class="hl-py">class Person:
+    def __init__(self, name, age):
+        self.name, self.age = name, age
+    def __str__(self):            # print(p), str(p), f"{p}"
+        return f"{self.name}, {self.age}"
+    def __repr__(self):           # repr(p), Out[], lists
+        return f"Person({self.name!r}, {self.age})"
+    def __eq__(self, other):      # p1 == p2
+        return (self.name, self.age) == (other.name, other.age)</pre><div class="from">lecture 3 · 3.4</div></div></div>
+    <div class="obj"><div class="ty"><b>__new__</b> then <b>__init__</b></div><div class="bd"><pre class="hl-py">class Person:
+    def __new__(cls, name):       # 1. create (gets the class)
+        obj = super().__new__(cls)
+        return obj                # must return it
+    def __init__(self, name):     # 2. initialise (gets the object)
+        self.name = name</pre><div class="from">lecture 3 · 3.5</div></div></div>
+    <div class="obj"><div class="ty">more <b>dunders</b> you'll meet</div><div class="bd"><div class="table-wrap"><table class="t">
+      <tr><td class="mono">__len__</td><td>len(x)</td></tr>
+      <tr><td class="mono">__lt__, __gt__</td><td>&lt;, &gt; (and sorting)</td></tr>
+      <tr><td class="mono">__add__</td><td>x + y</td></tr>
+      <tr><td class="mono">__getitem__</td><td>x[i]</td></tr>
+      <tr><td class="mono">__iter__, __next__</td><td>for loops</td></tr>
+      <tr><td class="mono">__call__</td><td>x()</td></tr>
+    </table></div><div class="from">beyond the lecture</div></div></div>
+  </div>
+</section>
+
+<section class="section" id="r-deco">
+  <div class="sec-head"><span class="sec-num">L3</span><h2>Functions as objects &amp; decorators</h2></div>
+  <div class="grid">
+    <div class="obj"><div class="ty"><b>closure</b></div><div class="bd"><pre class="hl-py">def outer(x):
+    def inner(y):
+        return x + y      # remembers x
+    return inner          # no ()
+
+add_five = outer(5)
+add_five(4)               # 9</pre><div class="from">lecture 3 · 3.2</div></div></div>
+    <div class="obj"><div class="ty">pass a <b>function</b></div><div class="bd"><pre class="hl-py">def calculate(fun, x, y):
+    return fun(x, y)
+calculate(subtract, 5, 8)  # -3
+sorted(words, key=len)     # same idea, built in</pre><div class="from">lecture 3 · 3.2</div></div></div>
+    <div class="obj"><div class="ty">decorator <b>template</b></div><div class="bd"><pre class="hl-py">import functools
+
+def my_decorator(fun):
+    @functools.wraps(fun)
+    def inner(*args, **kwargs):
+        # before
+        result = fun(*args, **kwargs)
+        # after
+        return result
+    return inner
+
+@my_decorator            # f = my_decorator(f)
+def f(a, b): ...</pre><div class="from">lecture 3 · 3.3</div></div></div>
+    <div class="obj"><div class="ty"><b>stacking</b> order</div><div class="bd"><pre class="hl-py">@star          # outermost: runs first and last
+@percent       # applied first (closest to f)
+def printer(msg): ...
+# printer = star(percent(printer))</pre><div class="from">lecture 3 · 3.3</div></div></div>
+  </div>
+</section>
+
+<section class="section" id="r-meta">
+  <div class="sec-head"><span class="sec-num">L3</span><h2><code>type</code> and metaclasses</h2></div>
+  <div class="grid">
+    <div class="obj"><div class="ty">the <b>type</b> chain</div><div class="bd"><pre class="hl-py">type(10)          # int
+type(int)         # type
+type(Person)      # type
+type(type)        # type
+isinstance(Person, type)   # True</pre><div class="from">lecture 3 · 3.1, 3.6</div></div></div>
+    <div class="obj"><div class="ty">build a class with <b>type()</b></div><div class="bd"><pre class="hl-py">Test = type("Test", (Base,), dict(x=10, method=my_fun))
+# same as:
+class Test(Base):
+    x = 10
+    method = my_fun
+# classes can be changed later:
+Test.y = 20</pre><div class="from">lecture 3 · 3.6</div></div></div>
+    <div class="obj"><div class="ty"><b>metaclass</b> template</div><div class="bd"><pre class="hl-py">class Registry(type):
+    classes = {}
+    def __new__(cls, name, bases, dct):
+        new_class = super().__new__(cls, name, bases, dct)
+        Registry.classes[name] = new_class
+        return new_class
+
+class Dog(metaclass=Registry):
+    pass
+type(Dog)          # __main__.Registry</pre><div class="from">lecture 3 · 3.7</div></div></div>
+  </div>
+</section>
+
+<section class="section" id="r-gen">
+  <div class="sec-head"><span class="sec-num">L3</span><h2>Generators</h2></div>
+  <div class="grid">
+    <div class="obj"><div class="ty">generator <b>function</b></div><div class="bd"><pre class="hl-py">def my_range(n):
+    i = 0
+    while i &lt; n:
+        yield i           # give a value, pause here
+        i += 1
+
+r = my_range(3)           # nothing runs yet
+next(r); next(r); next(r) # 0, 1, 2
+next(r)                   # StopIteration
+for x in my_range(3): ... # for handles StopIteration</pre><div class="from">lecture 3 · 3.8</div></div></div>
+    <div class="obj"><div class="ty">generator <b>expression</b></div><div class="bd"><pre class="hl-py">[x * x for x in data]     # list: all values now
+(x * x for x in data)     # generator: one at a time
+sum(x * x for x in data)  # no list built</pre><div class="from">lecture 3 · 3.8</div></div></div>
+    <div class="obj"><div class="ty"><b>return</b> vs <b>yield</b></div><div class="bd"><p><code>return</code> gives one value and the function is finished. <code>yield</code> gives a value and the function <strong>pauses</strong>, keeping its local variables, until the next <code>next()</code>. A generator can be looped over only once.</p><div class="from">lecture 3 · 3.8</div></div></div>
+  </div>
+</section>
+
+<section class="section" id="r-gloss">
+  <div class="sec-head"><span class="sec-num">A–Z</span><h2>Glossary</h2></div>
+  <div class="grid">
+    <div class="obj"><div class="ty"><b>bytecode</b></div><div class="bd"><p>The low-level instructions Python compiles your code into before the Python Virtual Machine runs them.</p></div></div>
+    <div class="obj"><div class="ty"><b>GIL</b></div><div class="bd"><p>Global Interpreter Lock: lets only one thread execute Python bytecode at a time in CPython.</p></div></div>
+    <div class="obj"><div class="ty"><b>class / instance</b></div><div class="bd"><p>A class is the blueprint; an instance (object) is one thing built from it.</p></div></div>
+    <div class="obj"><div class="ty"><b>method</b></div><div class="bd"><p>A function defined inside a class; its first parameter (<code>self</code>) is the object.</p></div></div>
+    <div class="obj"><div class="ty"><b>inheritance</b></div><div class="bd"><p>A child class takes on the attributes and methods of its parent and can override them.</p></div></div>
+    <div class="obj"><div class="ty"><b>polymorphism</b></div><div class="bd"><p>The same method name behaves differently for different types.</p></div></div>
+    <div class="obj"><div class="ty"><b>encapsulation</b></div><div class="bd"><p>Restricting direct access to an object's data so it's changed only through its methods.</p></div></div>
+    <div class="obj"><div class="ty"><b>name mangling</b></div><div class="bd"><p>Python renames <code>__x</code> inside class <code>C</code> to <code>_C__x</code>.</p></div></div>
+    <div class="obj"><div class="ty"><b>closure</b></div><div class="bd"><p>An inner function that remembers variables from the function that created it.</p></div></div>
+    <div class="obj"><div class="ty"><b>decorator</b></div><div class="bd"><p>A function that wraps another function to change its behaviour without editing it.</p></div></div>
+    <div class="obj"><div class="ty"><b>metaprogramming</b></div><div class="bd"><p>Programs that create or manipulate other programs (or themselves).</p></div></div>
+    <div class="obj"><div class="ty"><b>metaclass</b></div><div class="bd"><p>A class whose instances are classes. <code>type</code> is the default.</p></div></div>
+    <div class="obj"><div class="ty"><b>iterator</b></div><div class="bd"><p>An object you can step through with <code>next()</code> one item at a time.</p></div></div>
+    <div class="obj"><div class="ty"><b>generator</b></div><div class="bd"><p>A function that uses <code>yield</code> to produce an iterator, making values lazily.</p></div></div>
+    <div class="obj"><div class="ty"><b>MapReduce</b></div><div class="bd"><p>Split a big job into map (process pieces in parallel) and reduce (combine results); the model behind Hadoop.</p></div></div>
+  </div>
+</section>
+
+<div id="lec-nav"></div>
+</main>
+<aside class="toc"></aside>
+</div>
+
+<script>
+document.addEventListener('ds:ready', () => {
+  const box = document.getElementById('ref-search'), count = document.getElementById('ref-count');
+  const cards = Array.from(document.querySelectorAll('.section .obj')), secs = Array.from(document.querySelectorAll('.content > .section'));
+  function filter() {
+    const q = box.value.trim().toLowerCase();
+    let n = 0;
+    cards.forEach(c => { const hit = !q || c.textContent.toLowerCase().includes(q); c.classList.toggle('hidden', !hit); if (hit) n++; });
+    secs.forEach(s => s.classList.toggle('hidden', !s.querySelector('.obj:not(.hidden)')));
+    count.textContent = q ? `${n} card${n === 1 ? '' : 's'} match “${box.value.trim()}”` : `${cards.length} cards`;
+  }
+  box.addEventListener('input', filter); filter();
+});
+</script>
+</body>
+</html>
